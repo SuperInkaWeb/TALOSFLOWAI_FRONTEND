@@ -23,17 +23,25 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  BulbOutlined,
+  ShareAltOutlined,
 } from "@ant-design/icons";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../app/store/auth.store";
+import { useThemeStore } from "../../app/store/theme.store";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
 
-const formatName = (value: string) => {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
+const formatOrganizationName = (value: string) => {
+  if (!value) return "Organización";
+
+  return value
+    .replace(/^tenant[_-]?/i, "")
+    .replace(/[_-]+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const roleMap: Record<string, string> = {
@@ -60,6 +68,10 @@ export function AppLayout() {
   const schema = useAuthStore((state) => state.schema);
   const role = useAuthStore((state) => state.role);
 
+  const { mode, toggleTheme } = useThemeStore();
+
+  const isDark = mode === "dark";
+
   const [collapsed, setCollapsed] = useState(() => {
     const saved = localStorage.getItem("sidebar_collapsed");
     return saved === "true";
@@ -73,7 +85,9 @@ export function AppLayout() {
   };
 
   useEffect(() => {
-    if (isMobile) setMobileOpen(false);
+    if (isMobile) {
+      setMobileOpen(false);
+    }
   }, [location.pathname, isMobile]);
 
   const items: MenuProps["items"] = useMemo(
@@ -114,15 +128,29 @@ export function AppLayout() {
         label: "Billing",
         title: "Billing",
       },
+
+      {
+        key: "/app/referrals",
+        icon: <ShareAltOutlined />,
+        label: "Referrals",
+        title: "Referrals"
+      }
     ],
     []
   );
+
+  const displayOrganization = formatOrganizationName(
+    schema || "Organización"
+  );
+  const displayRole = roleMap[role || "USER"] || "Usuario";
+  const roleColor = roleColorMap[role || "USER"] || "default";
 
   const userMenuItems: MenuProps["items"] = [
     {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Cerrar sesión",
+      danger: true,
       onClick: () => {
         logout();
         navigate("/auth/login");
@@ -130,128 +158,160 @@ export function AppLayout() {
     },
   ];
 
-  const rawOrganization = schema
-    ? schema.replace(/^inquilino_/, "").replace(/^tenant_/, "")
-    : "";
-
-  const displayOrganization = rawOrganization
-    ? formatName(rawOrganization)
-    : "Sin organización";
-
-  const displayRole = role ? roleMap[role] ?? role.replaceAll("_", " ") : "Sin rol";
-  const roleColor = role ? roleColorMap[role] ?? "default" : "default";
-
   const sidebarMenu = (
     <>
       <div
         style={{
-          height: 76,
+          height: 84,
           display: "flex",
           alignItems: "center",
-          justifyContent: isMobile
-            ? "space-between"
-            : collapsed
-            ? "center"
-            : "space-between",
-          padding: isMobile ? "0 20px" : collapsed ? "0 12px" : "0 20px",
-          color: "#fff",
-          fontWeight: 800,
-          fontSize: isMobile ? 28 : collapsed ? 22 : 28,
-          letterSpacing: -0.8,
-          transition: "all 0.25s ease",
+          justifyContent: "space-between",
+          padding: isMobile ? "0 16px" : collapsed ? "0 16px" : "0 18px",
+          borderBottom: isDark
+            ? "1px solid rgba(148, 163, 184, 0.12)"
+            : "1px solid rgba(15, 23, 42, 0.08)",
+          flexShrink: 0,
         }}
       >
         <div
-  style={{
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    transition: "all 0.25s ease",
-  }}
->
-  {/* 🔷 Isotipo */}
-  <div
-    style={{
-      width: collapsed ? 36 : 42,
-      height: collapsed ? 36 : 42,
-      borderRadius: 12,
-      background: "linear-gradient(135deg, #1677ff, #4096ff)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      fontWeight: 800,
-      fontSize: collapsed ? 16 : 18,
-      color: "#fff",
-      boxShadow: "0 6px 16px rgba(22,119,255,0.35)",
-      transition: "all 0.25s ease",
-    }}
-              >
-                Q
-              </div>
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: collapsed && !isMobile ? 0 : 12,
+            width: "100%",
+            minWidth: 0,
+          }}
+        >
+          <img
+            src="/taloslogo.png"
+            alt="TalosFlow"
+            style={{
+              width: collapsed && !isMobile ? 40 : 42,
+              height: collapsed && !isMobile ? 40 : 42,
+              borderRadius: 12,
+              objectFit: "cover",
+              boxShadow: isDark
+                ? "0 8px 24px rgba(99, 102, 241, 0.28)"
+                : "0 8px 24px rgba(99, 102, 241, 0.18)",
+              flexShrink: 0,
+            }}
+          />
 
-              {/* 🔤 Texto (solo cuando está abierto) */}
-              {!collapsed && !isMobile && (
-                <span
-                  style={{
-                    fontSize: 26,
-                    fontWeight: 800,
-                    color: "#fff",
-                    letterSpacing: -0.5,
-                    transition: "all 0.25s ease",
-                  }}
-                >
-                  Qoribex
-                </span>
-              )}
+          {!collapsed && !isMobile && (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                lineHeight: 1.05,
+                minWidth: 0,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 22,
+                  fontWeight: 800,
+                  color: isDark ? "#ffffff" : "#0f172a",
+                  letterSpacing: -0.6,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                TalosFlow
+              </span>
+
+              <span
+                style={{
+                  fontSize: 12,
+                  color: isDark ? "#94a3b8" : "#64748b",
+                  marginTop: 4,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Social AI Platform
+              </span>
             </div>
+          )}
+        </div>
 
         {isMobile ? (
           <Button
             type="text"
-            icon={<MenuFoldOutlined style={{ color: "#fff", fontSize: 18 }} />}
+            icon={
+              <MenuFoldOutlined
+                style={{
+                  color: isDark ? "#fff" : "#0f172a",
+                  fontSize: 18,
+                }}
+              />
+            }
             onClick={() => setMobileOpen(false)}
           />
         ) : !collapsed ? (
           <Button
             type="text"
-            icon={<MenuFoldOutlined style={{ color: "#fff", fontSize: 18 }} />}
+            icon={
+              <MenuFoldOutlined
+                style={{
+                  color: isDark ? "#fff" : "#0f172a",
+                  fontSize: 18,
+                }}
+              />
+            }
             onClick={() => handleCollapsedChange(true)}
           />
         ) : null}
       </div>
 
-      <Menu
-        theme="dark"
-        mode="inline"
-        inlineCollapsed={!isMobile && collapsed}
-        selectedKeys={[location.pathname]}
-        items={items}
-        onClick={({ key }) => {
-          navigate(key);
-          if (isMobile) setMobileOpen(false);
-        }}
-        style={{
-          borderInlineEnd: "none",
-          fontSize: 15,
-          background: "transparent",
-          paddingInline: 8,
-        }}
-      />
+      <div style={{ paddingTop: 10, flex: 1, overflow: "auto" }}>
+        <Menu
+          theme={isDark ? "dark" : "light"}
+          mode="inline"
+          inlineCollapsed={!isMobile && collapsed}
+          selectedKeys={[location.pathname]}
+          items={items}
+          onClick={({ key }) => {
+            navigate(key);
+            if (isMobile) setMobileOpen(false);
+          }}
+          style={{
+            borderInlineEnd: "none",
+            fontSize: 15,
+            background: "transparent",
+            paddingInline: 8,
+          }}
+        />
+      </div>
     </>
   );
 
   return (
-    <Layout style={{ minHeight: "100vh", background: "#f5f7fb" }}>
+    <Layout
+      style={{
+        minHeight: "100vh",
+        background: isDark
+          ? "linear-gradient(135deg, #020617, #0f172a)"
+          : "#f5f7fb",
+      }}
+    >
       <style>
         {`
           .premium-sider {
-            background: linear-gradient(180deg, #020617 0%, #0f172a 100%) !important;
+            background: ${
+              isDark
+                ? "linear-gradient(180deg, #020617 0%, #0f172a 100%)"
+                : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)"
+            } !important;
             transition: all 0.28s ease !important;
+            border-right: ${
+              isDark
+                ? "1px solid rgba(148, 163, 184, 0.12)"
+                : "1px solid rgba(15, 23, 42, 0.08)"
+            };
           }
 
           .premium-sider .ant-layout-sider-children {
             display: flex;
             flex-direction: column;
+            height: 100%;
           }
 
           .premium-sider .ant-menu {
@@ -264,20 +324,34 @@ export function AppLayout() {
             border-radius: 14px;
             margin-block: 6px;
             transition: all 0.2s ease;
+            color: ${isDark ? "#cbd5e1" : "#334155"} !important;
           }
 
           .premium-sider .ant-menu-item .ant-menu-item-icon {
             font-size: 18px;
+            color: ${isDark ? "#cbd5e1" : "#334155"} !important;
           }
 
           .premium-sider .ant-menu-item:hover {
-            background: rgba(255, 255, 255, 0.08) !important;
+            background: ${
+              isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(99, 102, 241, 0.08)"
+            } !important;
             transform: translateX(2px);
+            color: ${isDark ? "#ffffff" : "#111827"} !important;
+          }
+
+          .premium-sider .ant-menu-item:hover .ant-menu-item-icon {
+            color: ${isDark ? "#ffffff" : "#111827"} !important;
           }
 
           .premium-sider .ant-menu-item-selected {
-            background: linear-gradient(90deg, #1677ff 0%, #4096ff 100%) !important;
-            box-shadow: 0 8px 20px rgba(22, 119, 255, 0.28);
+            background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%) !important;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.28);
+            color: #ffffff !important;
+          }
+
+          .premium-sider .ant-menu-item-selected .ant-menu-item-icon {
+            color: #ffffff !important;
           }
 
           .premium-sider .ant-menu-item-selected::after {
@@ -285,19 +359,60 @@ export function AppLayout() {
           }
 
           .premium-account:hover {
-            background: #f8fafc;
+            background: ${
+              isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(15, 23, 42, 0.04)"
+            };
+          }
+
+          .premium-drawer .ant-drawer-content {
+            background: ${
+              isDark
+                ? "linear-gradient(180deg, #020617 0%, #0f172a 100%)"
+                : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)"
+            } !important;
           }
 
           .premium-drawer .ant-drawer-body {
             padding: 0 !important;
-            background: linear-gradient(180deg, #020617 0%, #0f172a 100%) !important;
+            background: ${
+              isDark
+                ? "linear-gradient(180deg, #020617 0%, #0f172a 100%)"
+                : "linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)"
+            } !important;
+          }
+
+          .premium-user-dropdown .ant-dropdown-menu {
+            background: ${isDark ? "#0f172a" : "#ffffff"} !important;
+            border: 1px solid ${isDark ? "#1e293b" : "#e2e8f0"} !important;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.18) !important;
+            border-radius: 14px !important;
+            padding: 8px !important;
+          }
+
+          .premium-user-dropdown .ant-dropdown-menu-item {
+            color: ${isDark ? "#e2e8f0" : "#0f172a"} !important;
+            border-radius: 10px !important;
+          }
+
+          .premium-user-dropdown .ant-dropdown-menu-item:hover {
+            background: ${
+              isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.05)"
+            } !important;
+          }
+
+          .premium-user-dropdown .ant-dropdown-menu-item-danger {
+            color: #f87171 !important;
+          }
+
+          .premium-user-dropdown .ant-dropdown-menu-item-danger:hover {
+            background: rgba(248,113,113,0.12) !important;
           }
         `}
       </style>
 
       {!isMobile && (
         <Sider
-          theme="dark"
+          theme={isDark ? "dark" : "light"}
           collapsible
           collapsed={collapsed}
           trigger={null}
@@ -305,7 +420,9 @@ export function AppLayout() {
           collapsedWidth={88}
           className="premium-sider"
           style={{
-            boxShadow: "2px 0 12px rgba(0,0,0,0.08)",
+            boxShadow: isDark
+              ? "2px 0 18px rgba(0,0,0,0.18)"
+              : "2px 0 18px rgba(15,23,42,0.06)",
             overflow: "hidden",
           }}
         >
@@ -327,15 +444,24 @@ export function AppLayout() {
         </Drawer>
       )}
 
-      <Layout style={{ background: "#f5f7fb", transition: "all 0.28s ease" }}>
+      <Layout
+        style={{
+          background: "transparent",
+          transition: "all 0.28s ease",
+        }}
+      >
         <Header
           style={{
-            background: "#ffffff",
+            background: isDark ? "rgba(2, 6, 23, 0.82)" : "rgba(255,255,255,0.82)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
             padding: isMobile ? "0 16px" : "0 24px",
-            borderBottom: "1px solid #eef2f7",
+            borderBottom: isDark
+              ? "1px solid rgba(148, 163, 184, 0.12)"
+              : "1px solid rgba(15, 23, 42, 0.08)",
             height: 76,
             lineHeight: "normal",
           }}
@@ -344,13 +470,21 @@ export function AppLayout() {
             {isMobile ? (
               <Button
                 type="text"
-                icon={<MenuUnfoldOutlined style={{ fontSize: 18 }} />}
+                icon={
+                  <MenuUnfoldOutlined
+                    style={{ fontSize: 18, color: isDark ? "#ffffff" : "#0f172a" }}
+                  />
+                }
                 onClick={() => setMobileOpen(true)}
               />
             ) : collapsed ? (
               <Button
                 type="text"
-                icon={<MenuUnfoldOutlined style={{ fontSize: 18 }} />}
+                icon={
+                  <MenuUnfoldOutlined
+                    style={{ fontSize: 18, color: isDark ? "#ffffff" : "#0f172a" }}
+                  />
+                }
                 onClick={() => handleCollapsedChange(false)}
               />
             ) : null}
@@ -360,7 +494,7 @@ export function AppLayout() {
                 strong
                 style={{
                   fontSize: isMobile ? 16 : 18,
-                  color: "#111827",
+                  color: isDark ? "#ffffff" : "#0f172a",
                 }}
               >
                 Panel principal
@@ -371,7 +505,7 @@ export function AppLayout() {
                   strong
                   style={{
                     fontSize: isMobile ? 14 : 16,
-                    color: "#1f2937",
+                    color: isDark ? "#e2e8f0" : "#334155",
                   }}
                 >
                   {displayOrganization}
@@ -392,44 +526,76 @@ export function AppLayout() {
             </Space>
           </Space>
 
-          <Dropdown menu={{ items: userMenuItems }} trigger={["click"]}>
-            <Space
-              size={10}
-              className="premium-account"
-              style={{
-                cursor: "pointer",
-                padding: isMobile ? "6px 8px" : "8px 12px",
-                borderRadius: 14,
-                transition: "background 0.2s ease",
-              }}
+          <Space align="center" size={10}>
+            <Button
+              type="text"
+              onClick={toggleTheme}
+              icon={
+                <BulbOutlined
+                  style={{
+                    fontSize: 18,
+                    color: isDark ? "#facc15" : "#6366f1",
+                  }}
+                />
+              }
+            />
+
+            <Dropdown
+              menu={{ items: userMenuItems }}
+              trigger={["click"]}
+              overlayClassName="premium-user-dropdown"
             >
-              <Avatar
-                size={isMobile ? 36 : 40}
-                icon={<UserOutlined />}
-                style={{ backgroundColor: "#e5e7eb", color: "#6b7280" }}
-              />
-              {!isMobile && (
-                <Space direction="vertical" size={0}>
-                  <Text strong style={{ color: "#111827" }}>
-                    Mi cuenta
-                  </Text>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Sesión activa
-                  </Text>
-                </Space>
-              )}
-            </Space>
-          </Dropdown>
+              <Space
+                size={10}
+                className="premium-account"
+                style={{
+                  cursor: "pointer",
+                  padding: isMobile ? "6px 8px" : "8px 12px",
+                  borderRadius: 14,
+                  transition: "background 0.2s ease",
+                }}
+              >
+                <Avatar
+                  size={isMobile ? 36 : 40}
+                  icon={<UserOutlined />}
+                  style={{
+                    backgroundColor: isDark ? "#1e293b" : "#e2e8f0",
+                    color: isDark ? "#cbd5e1" : "#334155",
+                    border: isDark
+                      ? "1px solid rgba(148, 163, 184, 0.18)"
+                      : "1px solid rgba(15, 23, 42, 0.08)",
+                  }}
+                />
+                {!isMobile && (
+                  <Space direction="vertical" size={0}>
+                    <Text strong style={{ color: isDark ? "#ffffff" : "#0f172a" }}>
+                      Mi cuenta
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: isDark ? "#94a3b8" : "#64748b",
+                      }}
+                    >
+                      Sesión activa
+                    </Text>
+                  </Space>
+                )}
+              </Space>
+            </Dropdown>
+          </Space>
         </Header>
 
-        <Content style={{ margin: isMobile ? 16 : 24 }}>
+        <Content style={{ margin: isMobile ? 16 : 20 }}>
           <div
             style={{
-              minHeight: isMobile ? "calc(100vh - 108px)" : "calc(100vh - 124px)",
-              background: "#ffffff",
+              minHeight: isMobile
+                ? "calc(100vh - 108px)"
+                : "calc(100vh - 116px)",
+              background: "transparent",
               borderRadius: 20,
-              padding: isMobile ? 18 : 28,
-              boxShadow: "0 10px 30px rgba(15, 23, 42, 0.06)",
+              padding: 0,
+              boxShadow: "none",
               transition: "all 0.28s ease",
             }}
           >

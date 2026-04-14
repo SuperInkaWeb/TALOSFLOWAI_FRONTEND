@@ -28,6 +28,7 @@ import { BrandImageUpload } from "../features/branding/components/brand-image-up
 import { useBrandProfile } from "../features/branding/hooks/use-brand-profile";
 import { useUpdateBrandProfile } from "../features/branding/hooks/use-update-brand-profile";
 import type { UpsertBrandProfileRequest } from "../types/brand.types";
+import { BrandSocialLinksSection } from "../features/branding/components/brand-social-links-section";
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -557,6 +558,9 @@ export function BrandingPage() {
                   </Col>
                 </Row>
                 <Divider />
+
+                <BrandSocialLinksSection/>
+
 
                 <Title level={5}>Paleta de marca</Title>
 

@@ -1,3 +1,15 @@
+export type BrandContactPlatform =
+  | "FACEBOOK"
+  | "INSTAGRAM"
+  | "WHATSAPP"
+  | "LINKEDIN"
+  | "TIKTOK"
+  | "X"
+  | "YOUTUBE"
+  | "WEBSITE"
+  | "PHONE"
+  | "EMAIL";
+
 export type BrandProfileResponse = {
   id: number;
   brandName: string;
@@ -49,7 +61,7 @@ export type UpsertBrandProfileRequest = {
 export type BrandSocialLinkResponse = {
   id: number;
   brandProfileId: number;
-  platform: string;
+  platform: BrandContactPlatform;
   label?: string | null;
   value: string;
   url?: string | null;
@@ -60,12 +72,11 @@ export type BrandSocialLinkResponse = {
 };
 
 export type CreateBrandSocialLinkRequest = {
-  platform: string;
+  platform: BrandContactPlatform;
   label?: string | null;
   value: string;
   url?: string | null;
   iconKey?: string | null;
-  displayOrder?: number;
   isActive?: boolean;
   isPrimary?: boolean;
 };

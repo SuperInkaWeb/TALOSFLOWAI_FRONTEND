@@ -9,6 +9,7 @@ import {
   Select,
   Space,
   Switch,
+  Typography,
 } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useMemo } from "react";
@@ -19,6 +20,17 @@ import type {
   RegeneratePostRequest,
 } from "../../../types/ai.types";
 import type { PostPageOption } from "./post-form-drawer";
+
+const { Text } = Typography;
+
+type TemplateValue =
+  | "PREMIUM_AUTO"
+  | "SOCIAL_BRAND"
+  | "BOLD"
+  | "SPLIT"
+  | "MINIMAL";
+
+type ImageGenerationMode = "EDITABLE_BASE" | "FINAL_AD_CREATIVE";
 
 type FormValues = {
   idea: string;
@@ -31,7 +43,8 @@ type FormValues = {
     showLogo: boolean;
     showCTA: boolean;
     showSocialLinks: boolean;
-    template?: string | null;
+    template?: TemplateValue | null;
+    imageGenerationMode?: ImageGenerationMode;
   };
 };
 
@@ -44,6 +57,38 @@ type Props = {
   ) => void;
   pages: PostPageOption[];
 };
+
+const TEMPLATE_OPTIONS: Array<{
+  label: string;
+  value: TemplateValue;
+}> = [
+  { label: "Automático premium", value: "PREMIUM_AUTO" },
+  { label: "Marca social", value: "SOCIAL_BRAND" },
+  { label: "Fuerte", value: "BOLD" },
+  { label: "Dividido", value: "SPLIT" },
+  { label: "Mínimo", value: "MINIMAL" },
+];
+
+const IMAGE_MODE_OPTIONS: Array<{
+  label: string;
+  value: ImageGenerationMode;
+}> = [
+  { label: "Base editable", value: "EDITABLE_BASE" },
+  { label: "Anuncio final IA", value: "FINAL_AD_CREATIVE" },
+];
+
+const TONE_OPTIONS = [
+  { label: "Profesional", value: "PROFESIONAL" },
+  { label: "Emocional", value: "EMOCIONAL" },
+  { label: "Divertido", value: "DIVERTIDO" },
+  { label: "Persuasivo", value: "PERSUASIVO" },
+  { label: "Cercano", value: "CERCANO" },
+];
+
+const PLATFORM_OPTIONS = [
+  { label: "Facebook", value: "FACEBOOK" },
+  { label: "Instagram", value: "INSTAGRAM" },
+];
 
 export function AiGenerateDrawer({
   open,
@@ -74,7 +119,10 @@ export function AiGenerateDrawer({
         showLogo: values.creativeOptions.showLogo,
         showCTA: values.creativeOptions.showCTA,
         showSocialLinks: values.creativeOptions.showSocialLinks,
-        template: values.creativeOptions.template ?? null,
+        template: values.creativeOptions.template ?? "PREMIUM_AUTO",
+        imageGenerationMode:
+          values.creativeOptions.imageGenerationMode ??
+          "FINAL_AD_CREATIVE",
       },
     };
 
@@ -122,9 +170,10 @@ export function AiGenerateDrawer({
             creativeOptions: {
               useBranding: true,
               showLogo: true,
-              showCTA: false,
+              showCTA: true,
               showSocialLinks: true,
               template: "PREMIUM_AUTO",
+              imageGenerationMode: "FINAL_AD_CREATIVE",
             },
           }}
         >
@@ -138,7 +187,7 @@ export function AiGenerateDrawer({
           >
             <Input.TextArea
               rows={5}
-              placeholder="Ej: Promocionar hamburguesas artesanales con delivery inmediato y combos especiales"
+              placeholder="Ej: Promocionar hamburguesas 2x1 para MrChucks en Cuenca Ricaurte"
             />
           </Form.Item>
 
@@ -147,15 +196,7 @@ export function AiGenerateDrawer({
             name="tone"
             rules={[{ required: true, message: "Selecciona un tono" }]}
           >
-            <Select
-              options={[
-                { label: "Profesional", value: "PROFESIONAL" },
-                { label: "Emocional", value: "EMOCIONAL" },
-                { label: "Divertido", value: "DIVERTIDO" },
-                { label: "Persuasivo", value: "PERSUASIVO" },
-                { label: "Cercano", value: "CERCANO" },
-              ]}
-            />
+            <Select options={TONE_OPTIONS} />
           </Form.Item>
 
           <Form.Item
@@ -163,12 +204,7 @@ export function AiGenerateDrawer({
             name="platform"
             rules={[{ required: true, message: "Selecciona una plataforma" }]}
           >
-            <Select
-              options={[
-                { label: "Facebook", value: "FACEBOOK" },
-                { label: "Instagram", value: "INSTAGRAM" },
-              ]}
-            />
+            <Select options={PLATFORM_OPTIONS} />
           </Form.Item>
 
           <Form.Item
@@ -216,14 +252,28 @@ export function AiGenerateDrawer({
             label="Template"
             name={["creativeOptions", "template"]}
             rules={[{ required: true, message: "Selecciona un template" }]}
+            extra={
+              <Text type="secondary">
+                Usa <strong>Automático premium</strong> para mantener el flujo
+                premium del backend.
+              </Text>
+            }
           >
-            <Select
-              options={[
-                { label: "Premium Auto", value: "PREMIUM_AUTO" },
-                { label: "Social Brand", value: "SOCIAL_BRAND" },
-                { label: "Minimal", value: "MINIMAL" },
-              ]}
-            />
+            <Select options={TEMPLATE_OPTIONS} />
+          </Form.Item>
+
+          <Form.Item
+            label="Modo de generación"
+            name={["creativeOptions", "imageGenerationMode"]}
+            rules={[{ required: true, message: "Selecciona un modo" }]}
+            extra={
+              <Text type="secondary">
+                Usa <strong>Anuncio final IA</strong> para que la IA genere una
+                pieza casi completa y el backend solo remate branding.
+              </Text>
+            }
+          >
+            <Select options={IMAGE_MODE_OPTIONS} />
           </Form.Item>
 
           <Space

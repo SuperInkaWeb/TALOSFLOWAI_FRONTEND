@@ -12,7 +12,7 @@ type Props = {
 };
 
 export function PostImageUpload({
-  label = "Imagen del post",
+  label = "",
   value,
   onChange,
 }: Props) {

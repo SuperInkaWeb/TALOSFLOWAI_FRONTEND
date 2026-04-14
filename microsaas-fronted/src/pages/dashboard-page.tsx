@@ -6,26 +6,21 @@ import {
   Empty,
   Progress,
   Row,
-  Skeleton,
   Space,
   Statistic,
   Tag,
   Typography,
 } from "antd";
-import type { CSSProperties, MouseEvent } from "react";
 import {
-  CheckCircleOutlined,
-  ClockCircleOutlined,
   FileTextOutlined,
   LinkOutlined,
   RobotOutlined,
-  CloseCircleOutlined,
-  EditOutlined,
-  BarChartOutlined,
 } from "@ant-design/icons";
 import { useDashboardSummary } from "../features/dashboard/hooks/use-dashboard-summary";
+import { useThemeStore } from "../app/store/theme.store";
+import { PostPreview } from "../components/PostPreview";
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text } = Typography;
 
 function formatDate(date: string | null) {
   if (!date) return "Sin fecha";
@@ -39,448 +34,303 @@ function formatDate(date: string | null) {
 function renderStatusTag(status: string) {
   switch (status) {
     case "DRAFT":
-      return (
-        <Tag icon={<EditOutlined />} color="gold">
-          Borrador
-        </Tag>
-      );
+      return <Tag color="gold">Borrador</Tag>;
     case "SCHEDULED":
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="processing">
-          Programado
-        </Tag>
-      );
+      return <Tag color="processing">Programado</Tag>;
     case "PUBLISHED":
-      return (
-        <Tag icon={<CheckCircleOutlined />} color="success">
-          Publicado
-        </Tag>
-      );
+      return <Tag color="success">Publicado</Tag>;
     case "FAILED":
-      return (
-        <Tag icon={<CloseCircleOutlined />} color="error">
-          Fallido
-        </Tag>
-      );
-    case "CANCELED":
-      return <Tag color="default">Cancelado</Tag>;
+      return <Tag color="error">Fallido</Tag>;
     case "PROCESSING":
       return <Tag color="purple">Procesando</Tag>;
+    case "CANCELED":
+      return <Tag>Cancelado</Tag>;
     default:
       return <Tag>{status}</Tag>;
   }
 }
 
-function getActivityDate(post: {
-  updatedAt: string;
-  publishedAt?: string | null;
-  scheduledAt?: string | null;
-}) {
-  return post.publishedAt || post.scheduledAt || post.updatedAt;
-}
-
-const softCardStyle: CSSProperties = {
-  borderRadius: 16,
-  boxShadow: "0 4px 16px rgba(0,0,0,0.04)",
-  transition: "all 0.2s ease",
-};
-
-function handleCardMouseEnter(e: MouseEvent<HTMLDivElement>) {
-  e.currentTarget.style.transform = "translateY(-4px)";
-  e.currentTarget.style.boxShadow = "0 10px 24px rgba(0,0,0,0.08)";
-}
-
-function handleCardMouseLeave(e: MouseEvent<HTMLDivElement>) {
-  e.currentTarget.style.transform = "none";
-  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.04)";
-}
-
 export function DashboardPage() {
   const { data, isLoading, isError } = useDashboardSummary();
+  const { mode } = useThemeStore();
+
+  const isDark = mode === "dark";
 
   if (isLoading) {
     return (
-      <Space direction="vertical" size={24} style={{ width: "100%" }}>
-        <div>
-          <Title level={2} style={{ marginBottom: 4 }}>
-            Panel
-          </Title>
-          <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            Resumen general de publicaciones, uso de IA y actividad reciente.
-          </Paragraph>
-        </div>
-
-        <Skeleton active paragraph={{ rows: 10 }} />
-      </Space>
+      <div style={{ padding: 16 }}>
+        <Text style={{ color: isDark ? "#ffffff" : "#0f172a" }}>
+          Cargando dashboard...
+        </Text>
+      </div>
     );
   }
 
   if (isError || !data) {
     return (
-      <Space direction="vertical" size={24} style={{ width: "100%" }}>
-        <div>
-          <Title level={2} style={{ marginBottom: 4 }}>
-            Panel
-          </Title>
-          <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            Resumen general de publicaciones, uso de IA y actividad reciente.
-          </Paragraph>
-        </div>
-
+      <div style={{ padding: 16 }}>
         <Alert
           type="error"
           showIcon
-          message="No se pudieron cargar los datos del dashboard"
-          description="Verifica que el backend esté activo, que el token se esté enviando correctamente y que la ruta /dashboard/summary esté disponible."
+          message="No se pudo cargar el dashboard"
+          description="Verifica tu conexión, el backend o la sesión actual."
         />
-      </Space>
+      </div>
     );
   }
 
   const aiPercent =
     data.aiLimit > 0 ? Math.round((data.aiUsed / data.aiLimit) * 100) : 0;
 
-  const recentPosts = data.recentPosts ?? [];
+  const summaryCardStyle = {
+    borderRadius: 16,
+    background: isDark ? "#020617" : "#ffffff",
+    border: isDark ? "1px solid #1e293b" : "1px solid #e5e7eb",
+    boxShadow: isDark
+      ? "0 8px 24px rgba(0,0,0,0.16)"
+      : "0 8px 24px rgba(15,23,42,0.06)",
+  } as const;
 
   return (
-    <Space direction="vertical" size={24} style={{ width: "100%" }}>
-      <div>
-        <Title level={2} style={{ marginBottom: 4 }}>
-          Panel
-        </Title>
-        <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          Resumen general de publicaciones, uso de IA y actividad reciente.
-        </Paragraph>
-      </div>
-
-      <Alert
-        type="info"
-        showIcon
-        message={`Tienes ${data.totalPosts} publicaciones, ${data.publishedPosts} publicadas y ${data.failedPosts} fallidas.`}
-      />
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} md={12} xl={8}>
-          <Card
-            bordered={false}
-            style={{
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #1677ff 0%, #4096ff 100%)",
-              boxShadow: "0 8px 24px rgba(22,119,255,0.25)",
-              color: "#fff",
-              height: "100%",
-            }}
-          >
-            <Space align="center" style={{ marginBottom: 12 }}>
-              <FileTextOutlined style={{ fontSize: 20, color: "#fff" }} />
-              <Text strong style={{ color: "#fff" }}>
-                Publicaciones
-              </Text>
-            </Space>
-
-            <Statistic
-              value={data.totalPosts}
-              valueStyle={{ color: "#fff", fontSize: 36 }}
-            />
-
-            <Text style={{ color: "rgba(255,255,255,0.85)" }}>
-              Total de posts creados
+    <div style={{ padding: 16 }}>
+      <Space direction="vertical" size={20} style={{ width: "100%" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <img
+            src="/taloslogo.png"
+            alt="TalosFlow AI"
+            style={{ width: 36, height: 36, objectFit: "contain" }}
+          />
+          <div>
+            <Title
+              level={3}
+              style={{ margin: 0, color: isDark ? "#ffffff" : "#0f172a" }}
+            >
+              TalosFlow AI
+            </Title>
+            <Text style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+              Panel de control inteligente
             </Text>
-          </Card>
-        </Col>
-
-        <Col xs={24} md={12} xl={8}>
-          <Card
-            bordered={false}
-            style={{
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #722ed1 0%, #9254de 100%)",
-              boxShadow: "0 8px 24px rgba(114,46,209,0.22)",
-              color: "#fff",
-              height: "100%",
-            }}
-          >
-            <Space align="center" style={{ marginBottom: 12 }}>
-              <LinkOutlined style={{ fontSize: 20, color: "#fff" }} />
-              <Text strong style={{ color: "#fff" }}>
-                Páginas conectadas
-              </Text>
-            </Space>
-
-            <Statistic
-              value={data.totalPages}
-              valueStyle={{ color: "#fff", fontSize: 36 }}
-            />
-
-            <Text style={{ color: "rgba(255,255,255,0.85)" }}>
-              Páginas sincronizadas y disponibles
-            </Text>
-          </Card>
-        </Col>
-
-        <Col xs={24} md={12} xl={8}>
-          <Card
-            bordered={false}
-            style={{
-              borderRadius: 18,
-              background: "linear-gradient(135deg, #fa8c16 0%, #ffa940 100%)",
-              boxShadow: "0 8px 24px rgba(250,140,22,0.22)",
-              color: "#fff",
-              height: "100%",
-            }}
-          >
-            <Space align="center" style={{ marginBottom: 12 }}>
-              <RobotOutlined style={{ fontSize: 20, color: "#fff" }} />
-              <Text strong style={{ color: "#fff" }}>
-                Uso de IA
-              </Text>
-            </Space>
-
-            <Statistic
-              value={data.aiUsed}
-              suffix={`/ ${data.aiLimit}`}
-              valueStyle={{ color: "#fff", fontSize: 36 }}
-            />
-
-            <div style={{ marginTop: 14 }}>
-              <Progress
-                percent={aiPercent}
-                size="small"
-                strokeColor="#ffffff"
-                trailColor="rgba(255,255,255,0.25)"
-              />
-            </div>
-
-            <Text style={{ color: "rgba(255,255,255,0.85)" }}>
-              Generaciones realizadas
-            </Text>
-          </Card>
-        </Col>
-
-        <Col xs={24} md={12} xl={6}>
-          <div onMouseEnter={handleCardMouseEnter} onMouseLeave={handleCardMouseLeave}>
-            <Card bordered={false} style={softCardStyle}>
-              <Statistic
-                title="Borradores"
-                value={data.draftPosts}
-                valueStyle={{ color: "#faad14" }}
-              />
-            </Card>
           </div>
-        </Col>
+        </div>
 
-        <Col xs={24} md={12} xl={6}>
-          <div onMouseEnter={handleCardMouseEnter} onMouseLeave={handleCardMouseLeave}>
-            <Card bordered={false} style={softCardStyle}>
-              <Statistic
-                title="Programados"
-                value={data.scheduledPosts}
-                valueStyle={{ color: "#1677ff" }}
-              />
-            </Card>
-          </div>
-        </Col>
+        <Alert
+          type="info"
+          showIcon
+          message={`Tienes ${data.totalPosts} publicaciones, ${data.publishedPosts} publicadas y ${data.failedPosts} fallidas.`}
+        />
 
-        <Col xs={24} md={12} xl={6}>
-          <div onMouseEnter={handleCardMouseEnter} onMouseLeave={handleCardMouseLeave}>
-            <Card bordered={false} style={softCardStyle}>
-              <Statistic
-                title="Publicados"
-                value={data.publishedPosts}
-                valueStyle={{ color: "#3f8600" }}
-              />
-            </Card>
-          </div>
-        </Col>
-
-        <Col xs={24} md={12} xl={6}>
-          <div onMouseEnter={handleCardMouseEnter} onMouseLeave={handleCardMouseLeave}>
-            <Card bordered={false} style={softCardStyle}>
-              <Statistic
-                title="Fallidos"
-                value={data.failedPosts}
-                valueStyle={{ color: "#cf1322" }}
-              />
-            </Card>
-          </div>
-        </Col>
-
-        <Col xs={24} xl={8}>
-          <Card
-            bordered={false}
-            style={{
-              borderRadius: 18,
-              boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
-              height: "100%",
-            }}
-          >
-            <Space align="center" style={{ marginBottom: 12 }}>
-              <BarChartOutlined style={{ fontSize: 20, color: "#13c2c2" }} />
-              <Text strong>Rendimiento</Text>
-            </Space>
-
-            <Statistic
-              value={data.successRate}
-              suffix="%"
-              valueStyle={{ fontSize: 34 }}
-            />
-
-            <div style={{ marginTop: 14 }}>
-              <Progress percent={data.successRate} strokeColor="#13c2c2" />
-            </div>
-
-            <Text type="secondary">Publicaciones exitosas</Text>
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]}>
-        <Col xs={24} xl={16}>
-          <Card
-            bordered={false}
-            title="Actividad reciente"
-            style={{
-              borderRadius: 18,
-              boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
-              height: "100%",
-            }}
-          >
-            {recentPosts.length === 0 ? (
-              <Empty
-                description="Aún no tienes actividad reciente"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            ) : (
-              <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                {recentPosts.map((post) => (
-                  <Card
-                    key={post.id}
-                    size="small"
-                    style={{
-                      borderRadius: 14,
-                      background: "#fafafa",
-                      border: "1px solid #f0f0f0",
-                    }}
-                  >
-                    <Space direction="vertical" size={8} style={{ width: "100%" }}>
-                      <Space
-                        align="center"
-                        style={{
-                          width: "100%",
-                          justifyContent: "space-between",
-                        }}
-                      >
-                        <Text strong>
-                          {post.targets?.[0]?.pageName ?? "Sin página"} • #{post.id}
-                        </Text>
-                        {renderStatusTag(post.status)}
-                      </Space>
-
-                      <Text type="secondary">
-                        {post.content.length > 160
-                          ? `${post.content.slice(0, 160)}...`
-                          : post.content}
-                      </Text>
-
-                      <Text type="secondary">
-                        Fecha: {formatDate(getActivityDate(post))}
-                      </Text>
-
-                      {post.errorMessage && (
-                        <Alert
-                          type="error"
-                          showIcon
-                          message="Error en publicación"
-                          description={post.errorMessage}
-                        />
-                      )}
-                    </Space>
-                  </Card>
-                ))}
-              </Space>
-            )}
-          </Card>
-        </Col>
-
-        <Col xs={24} xl={8}>
-          <Card
-            bordered={false}
-            title="Resumen operativo"
-            style={{
-              borderRadius: 18,
-              boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
-              height: "100%",
-            }}
-          >
-            <Space direction="vertical" size={16} style={{ width: "100%" }}>
-              <div>
-                <Space align="center">
-                  <BarChartOutlined />
-                  <Text strong>Estado general</Text>
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={12} xl={8}>
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: 16,
+                background: "linear-gradient(135deg, #0ea5e9, #6366f1)",
+                color: "#fff",
+                boxShadow: "0 10px 28px rgba(99,102,241,0.28)",
+              }}
+            >
+              <Space direction="vertical" size={10} style={{ width: "100%" }}>
+                <Space>
+                  <FileTextOutlined />
+                  <Text style={{ color: "#fff" }}>Publicaciones</Text>
                 </Space>
-                <div style={{ marginTop: 10 }}>
-                  <Progress
-                    percent={Math.min(data.totalPosts > 0 ? data.successRate : 0, 100)}
-                    strokeColor="#52c41a"
-                    trailColor="#f0f0f0"
-                    showInfo={false}
-                    size="small"
-                  />
+
+                <Statistic
+                  value={data.totalPosts}
+                  valueStyle={{ color: "#fff" }}
+                />
+
+                <Text style={{ color: "#e2e8f0" }}>
+                  Total de posts creados
+                </Text>
+              </Space>
+            </Card>
+          </Col>
+
+          <Col xs={24} md={12} xl={8}>
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: 16,
+                background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                color: "#fff",
+                boxShadow: "0 10px 28px rgba(168,85,247,0.24)",
+              }}
+            >
+              <Space direction="vertical" size={10} style={{ width: "100%" }}>
+                <Space>
+                  <LinkOutlined />
+                  <Text style={{ color: "#fff" }}>Páginas</Text>
+                </Space>
+
+                <Statistic
+                  value={data.totalPages}
+                  valueStyle={{ color: "#fff" }}
+                />
+
+                <Text style={{ color: "#e2e8f0" }}>Páginas conectadas</Text>
+              </Space>
+            </Card>
+          </Col>
+
+          <Col xs={24} md={12} xl={8}>
+            <Card
+              bordered={false}
+              style={{
+                borderRadius: 16,
+                background: "linear-gradient(135deg, #06b6d4, #3b82f6)",
+                color: "#fff",
+                boxShadow: "0 10px 28px rgba(59,130,246,0.24)",
+              }}
+            >
+              <Space direction="vertical" size={10} style={{ width: "100%" }}>
+                <Space>
+                  <RobotOutlined />
+                  <Text style={{ color: "#fff" }}>Uso IA</Text>
+                </Space>
+
+                <Statistic
+                  value={data.aiUsed}
+                  suffix={`/ ${data.aiLimit}`}
+                  valueStyle={{ color: "#fff" }}
+                />
+
+                <Progress
+                  percent={aiPercent}
+                  size="small"
+                  strokeColor="#ffffff"
+                  trailColor="rgba(255,255,255,0.22)"
+                />
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+
+        <Row gutter={[16, 16]}>
+          {[
+            { label: "Borradores", value: data.draftPosts, color: "#facc15" },
+            {
+              label: "Programados",
+              value: data.scheduledPosts,
+              color: "#38bdf8",
+            },
+            {
+              label: "Publicados",
+              value: data.publishedPosts,
+              color: "#4ade80",
+            },
+            { label: "Fallidos", value: data.failedPosts, color: "#f87171" },
+          ].map((item) => (
+            <Col xs={24} md={12} xl={6} key={item.label}>
+              <Card style={summaryCardStyle}>
+                <Statistic
+                  title={
+                    <span style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                      {item.label}
+                    </span>
+                  }
+                  value={item.value}
+                  valueStyle={{ color: item.color }}
+                />
+              </Card>
+            </Col>
+          ))}
+        </Row>
+
+        <Row gutter={[16, 16]}>
+          <Col xs={24} xl={16}>
+            <Card
+              title={
+                <span style={{ color: isDark ? "#ffffff" : "#0f172a" }}>
+                  Actividad reciente
+                </span>
+              }
+              style={summaryCardStyle}
+            >
+              {!data.recentPosts || data.recentPosts.length === 0 ? (
+                <Empty
+                  description={
+                    <span style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                      No hay actividad reciente
+                    </span>
+                  }
+                />
+              ) : (
+                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  {data.recentPosts.map((post) => (
+                    <div key={post.id}>
+                      <PostPreview
+                        pageName={post.targets?.[0]?.pageName || "Sin página"}
+                        content={post.content || ""}
+                        imageUrl={post.mediaUrl}
+                        date={formatDate(post.updatedAt)}
+                        status={post.status}
+                      />
+                    </div>
+                  ))}
+                </Space>
+              )}
+            </Card>
+          </Col>
+
+          <Col xs={24} xl={8}>
+            <Card
+              title={
+                <span style={{ color: isDark ? "#ffffff" : "#0f172a" }}>
+                  Resumen
+                </span>
+              }
+              style={summaryCardStyle}
+            >
+              <Space direction="vertical" size={14} style={{ width: "100%" }}>
+                <div>
+                  <Text style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                    Tasa de éxito: {data.successRate}%
+                  </Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Progress percent={data.successRate} />
+                  </div>
                 </div>
-                <Text type="secondary">
-                  {data.totalPosts === 0
-                    ? "Aún no has creado publicaciones."
-                    : `Tienes ${data.totalPosts} publicación(es) registradas en el sistema.`}
-                </Text>
-              </div>
 
-              <Divider style={{ margin: "2px 0" }} />
+                <Divider
+                  style={{
+                    borderColor: isDark ? "#1e293b" : "#e5e7eb",
+                    margin: 0,
+                  }}
+                />
 
-              <div>
-                <Text strong>Rendimiento</Text>
-                <br />
-                <Text type="secondary">
-                  Tu tasa de éxito actual es de {data.successRate}%.
-                </Text>
-              </div>
+                <div>
+                  <Text style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                    IA usada: {data.aiUsed}/{data.aiLimit}
+                  </Text>
+                </div>
 
-              <Divider style={{ margin: "2px 0" }} />
+                <Divider
+                  style={{
+                    borderColor: isDark ? "#1e293b" : "#e5e7eb",
+                    margin: 0,
+                  }}
+                />
 
-              <div>
-                <Text strong>Redes conectadas</Text>
-                <br />
-                <Text type="secondary">
-                  {data.totalPages === 0
-                    ? "No hay páginas sincronizadas todavía."
-                    : `Tienes ${data.totalPages} página(s) disponible(s) para publicar.`}
-                </Text>
-              </div>
-
-              <Divider style={{ margin: "2px 0" }} />
-
-              <div>
-                <Text strong>Uso de IA</Text>
-                <br />
-                <Text type="secondary">
-                  Has usado {data.aiUsed} de {data.aiLimit} generaciones disponibles.
-                </Text>
-              </div>
-
-              <Divider style={{ margin: "2px 0" }} />
-
-              <div>
-                <Text strong>Próximo foco</Text>
-                <br />
-                <Text type="secondary">
-                  {data.draftPosts > 0
-                    ? "Tienes borradores listos. El siguiente paso es programarlos o publicarlos."
-                    : "El siguiente paso es crear más publicaciones y programarlas desde el módulo de Publicaciones."}
-                </Text>
-              </div>
-            </Space>
-          </Card>
-        </Col>
-      </Row>
-    </Space>
+                <div>
+                  <Text style={{ color: isDark ? "#94a3b8" : "#64748b" }}>
+                    Estado general:
+                  </Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Space wrap>
+                      {renderStatusTag("DRAFT")}
+                      {renderStatusTag("SCHEDULED")}
+                      {renderStatusTag("PUBLISHED")}
+                      {renderStatusTag("FAILED")}
+                    </Space>
+                  </div>
+                </div>
+              </Space>
+            </Card>
+          </Col>
+        </Row>
+      </Space>
+    </div>
   );
 }

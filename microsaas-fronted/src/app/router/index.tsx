@@ -9,6 +9,7 @@ import { SocialAccountsPage } from "../../pages/social-accounts-page";
 import { PostsPage } from "../../pages/posts-page";
 import { AiPage } from "../../pages/ai-page";
 import { BillingPage } from "../../pages/billing-page";
+import ReferralsPage from "../../pages/referral-page";
 
 export const router = createBrowserRouter([
   {
@@ -55,6 +56,11 @@ export const router = createBrowserRouter([
         path: "billing",
         element: <BillingPage />,
       },
+
+      {
+        path: "referrals",
+        element: <ReferralsPage />,
+      }
     ],
   },
 ]);

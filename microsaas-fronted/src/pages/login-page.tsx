@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button, Card, Form, Input, Typography, message } from "antd";
 import { Link, useNavigate } from "react-router-dom";
 import type { AxiosError } from "axios";
@@ -19,9 +20,14 @@ const { Title, Text } = Typography;
 export function LoginPage() {
   const navigate = useNavigate();
   const setToken = useAuthStore((state) => state.setToken);
+  const [loading, setLoading] = useState(false);
 
   const onFinish = async (values: LoginForm) => {
+    if (loading) return;
+
     try {
+      setLoading(true);
+
       const response = await api.post("/auth/login", {
         slug: values.slug.trim().toLowerCase(),
         email: values.email.trim().toLowerCase(),
@@ -39,6 +45,8 @@ export function LoginPage() {
         axiosError.response?.data?.message || "No se pudo iniciar sesión";
 
       message.error(backendMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -49,13 +57,19 @@ export function LoginPage() {
         display: "grid",
         placeItems: "center",
         background: "#f5f7fb",
+        padding: 24,
       }}
     >
       <Card style={{ width: 420, borderRadius: 16 }}>
         <Title level={2}>Iniciar sesión</Title>
         <Text type="secondary">Accede a tu panel Qoribex</Text>
 
-        <Form layout="vertical" onFinish={onFinish} style={{ marginTop: 24 }}>
+        <Form
+          layout="vertical"
+          onFinish={onFinish}
+          style={{ marginTop: 24 }}
+          disabled={loading}
+        >
           <Form.Item
             label="Slug de la organización"
             name="slug"
@@ -66,15 +80,18 @@ export function LoginPage() {
               },
             ]}
           >
-            <Input placeholder="tesalia" />
+            <Input placeholder="tesalia" disabled={loading} />
           </Form.Item>
 
           <Form.Item
             label="Correo"
             name="email"
-            rules={[{ required: true, message: "Ingresa tu correo" }]}
+            rules={[
+              { required: true, message: "Ingresa tu correo" },
+              { type: "email", message: "Ingresa un correo válido" },
+            ]}
           >
-            <Input placeholder="correo@empresa.com" />
+            <Input placeholder="correo@empresa.com" disabled={loading} />
           </Form.Item>
 
           <Form.Item
@@ -82,11 +99,11 @@ export function LoginPage() {
             name="password"
             rules={[{ required: true, message: "Ingresa tu contraseña" }]}
           >
-            <Input.Password placeholder="********" />
+            <Input.Password placeholder="********" disabled={loading} />
           </Form.Item>
 
-          <Button type="primary" htmlType="submit" block>
-            Entrar
+          <Button type="primary" htmlType="submit" block loading={loading} disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
           </Button>
         </Form>
 
