@@ -1,4 +1,4 @@
-import { Space, Typography } from "antd";
+/*import { Space, Typography } from "antd";
 import type { ReactNode } from "react";
 import { useThemeStore } from "../../app/store/theme.store";
 
@@ -72,4 +72,4 @@ export function PageHeader({
       {extra ? <div>{extra}</div> : null}
     </div>
   );
-}
+}*/

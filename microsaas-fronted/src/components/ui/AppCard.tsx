@@ -1,4 +1,4 @@
-import { Card } from "antd";
+/*import { Card } from "antd";
 import type { ReactNode, CSSProperties } from "react";
 import { useThemeStore } from "../../app/store/theme.store";
 
@@ -47,4 +47,4 @@ export function AppCard({
       {children}
     </Card>
   );
-}
+}*/

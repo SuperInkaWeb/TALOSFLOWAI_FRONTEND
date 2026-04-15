@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+/*import type { ReactNode } from "react";
 import { Space } from "antd";
 import { useThemeStore } from "../../app/store/theme.store";
 
@@ -23,4 +23,4 @@ export function PageContainer({ children }: PageContainerProps) {
       </Space>
     </div>
   );
-}
+}*/
