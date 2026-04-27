@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Button,
@@ -8,6 +8,7 @@ import {
   Table,
   Tag,
   Typography,
+  message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 
@@ -118,7 +119,7 @@ function formatDate(value?: string | null) {
 
   if (Number.isNaN(date.getTime())) return value;
 
-  return date.toLocaleString();
+  return date.toLocaleString("es-EC");
 }
 
 function normalizePages(raw: unknown): PostPageOption[] {
@@ -227,62 +228,84 @@ export function PostsPage() {
     return data.items.find((item) => item.id === detailPostId) ?? null;
   }, [data, detailPostId]);
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = useCallback(() => {
     setDrawerMode("create");
     setSelectedPostId(null);
     setDrawerOpen(true);
-  };
+  }, []);
 
-  const handleOpenEdit = (post: PostItem) => {
+  const handleOpenEdit = useCallback((post: PostItem) => {
     setDrawerMode("edit");
     setSelectedPostId(post.id);
     setDrawerOpen(true);
-  };
+  }, []);
 
-  const handleCloseDrawer = () => {
+  const handleCloseDrawer = useCallback(() => {
     setDrawerOpen(false);
     setSelectedPostId(null);
     setDrawerMode("create");
-  };
+  }, []);
 
-  const handleSaved = async () => {
+  const handleSaved = useCallback(async () => {
     await refetch();
-  };
+  }, [refetch]);
 
-  const handleGenerated = async (
-    result: GenerateFullPostResponse,
-    payload: RegeneratePostRequest
-  ) => {
-    setGeneratedPost(result);
-    setRegeneratePayload(payload);
-    await refetch();
-  };
+  const handleGenerated = useCallback(
+    async (
+      result: GenerateFullPostResponse,
+      payload: RegeneratePostRequest
+    ) => {
+      setGeneratedPost(result);
+      setRegeneratePayload(payload);
+      await refetch();
+    },
+    [refetch]
+  );
 
-  const handlePostUpdatedFromRegeneration = async (updatedPost: PostItem) => {
-    setGeneratedPost((prev) => {
-      if (!prev) return prev;
+  const handlePostUpdatedFromRegeneration = useCallback(
+    async (updatedPost: PostItem) => {
+      setGeneratedPost((prev) => {
+        if (!prev) return prev;
 
-      return {
-        ...prev,
-        text: updatedPost.content,
-        imageUrl: updatedPost.mediaUrl ?? prev.imageUrl,
-        status: updatedPost.status,
-        scheduledAt: updatedPost.scheduledAt ?? prev.scheduledAt,
-      };
-    });
+        return {
+          ...prev,
+          text: updatedPost.content,
+          imageUrl: updatedPost.mediaUrl ?? prev.imageUrl,
+          status: updatedPost.status,
+          scheduledAt: updatedPost.scheduledAt ?? prev.scheduledAt,
+        };
+      });
 
-    await refetch();
-  };
+      await refetch();
+    },
+    [refetch]
+  );
 
-  const handleOpenDetail = (post: PostItem) => {
+  const handleOpenDetail = useCallback((post: PostItem) => {
     setDetailPostId(post.id);
     setDetailOpen(true);
-  };
+  }, []);
 
-  const handleCloseDetail = () => {
+  const handleCloseDetail = useCallback(() => {
     setDetailOpen(false);
     setDetailPostId(null);
-  };
+  }, []);
+
+  const handleOpenPostById = useCallback(
+    (postId: number) => {
+      const postToEdit = data?.items?.find((item) => item.id === postId) ?? null;
+
+      if (!postToEdit) {
+        message.warning("No se encontró el post en la lista actual.");
+        return;
+      }
+
+      setDrawerMode("edit");
+      setSelectedPostId(postToEdit.id);
+      setDrawerOpen(true);
+    },
+    [data]
+  );
 
   const columns: ColumnsType<PostItem> = useMemo(
     () => [
@@ -373,7 +396,7 @@ export function PostsPage() {
         ),
       },
     ],
-    []
+    [handleOpenDetail, handleOpenEdit]
   );
 
   return (
@@ -406,7 +429,11 @@ export function PostsPage() {
               Generar con IA
             </Button>
 
-            <Button type="primary" onClick={handleOpenCreate}>
+            <Button
+              type="primary"
+              onClick={handleOpenCreate}
+              disabled={isLoadingPages || pageOptions.length === 0}
+            >
               Nuevo post
             </Button>
           </Space>
@@ -437,26 +464,8 @@ export function PostsPage() {
               setRegeneratePayload(null);
               setAiDrawerOpen(true);
             }}
-            onEditPost={(postId) => {
-              const postToEdit =
-                data?.items?.find((item) => item.id === postId) ?? null;
-
-              if (!postToEdit) return;
-
-              setDrawerMode("edit");
-              setSelectedPostId(postToEdit.id);
-              setDrawerOpen(true);
-            }}
-            onOpenPost={(postId) => {
-              const postToEdit =
-                data?.items?.find((item) => item.id === postId) ?? null;
-
-              if (!postToEdit) return;
-
-              setDrawerMode("edit");
-              setSelectedPostId(postToEdit.id);
-              setDrawerOpen(true);
-            }}
+            onEditPost={handleOpenPostById}
+            onOpenPost={handleOpenPostById}
             onClosePreview={() => {
               setGeneratedPost(null);
               setRegeneratePayload(null);
@@ -512,26 +521,27 @@ export function PostsPage() {
           pages={pageOptions}
         />
 
-                    <PostDetailDrawer
-              open={detailOpen}
-              onClose={handleCloseDetail}
-              post={detailPost}
-              onEdit={(post) => {
-                setDetailOpen(false);
-                setDetailPostId(null);
-                handleOpenEdit(post);
-              }}
-              onRegenerateImage={(post) => {
-                setDetailOpen(false);
-                setDetailPostId(null);
-                handleOpenEdit(post);
-              }}
-              onRegenerateText={(post) => {
-                setDetailOpen(false);
-                setDetailPostId(null);
-                handleOpenEdit(post);
-              }}
-            />
+        <PostDetailDrawer
+          open={detailOpen}
+          onClose={handleCloseDetail}
+          post={detailPost}
+          onEdit={(post) => {
+            setDetailOpen(false);
+            setDetailPostId(null);
+            handleOpenEdit(post);
+          }}
+          onRegenerateImage={(post) => {
+            setDetailOpen(false);
+            setDetailPostId(null);
+            handleOpenEdit(post);
+          }}
+          onRegenerateText={(post) => {
+            setDetailOpen(false);
+            setDetailPostId(null);
+            handleOpenEdit(post);
+          }}
+        />
+
         {!isLoadingPages && pageOptions.length === 0 && (
           <Alert
             type="warning"

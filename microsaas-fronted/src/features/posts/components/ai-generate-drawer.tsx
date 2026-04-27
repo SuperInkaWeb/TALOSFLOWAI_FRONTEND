@@ -1,41 +1,38 @@
 import {
+  Alert,
   Button,
   DatePicker,
   Divider,
   Drawer,
   Form,
   Input,
-  message,
   Select,
   Space,
   Switch,
   Typography,
+  message,
 } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { useMemo } from "react";
 import { useGeneratePost } from "../hooks/use-generate-post";
+import { usePlanAccess } from "../../billing/hooks/use-plan-access";
 import type {
+  AiPlatform,
+  AiTemplateValue,
+  AiTone,
   GenerateFullPostRequest,
   GenerateFullPostResponse,
+  ImageGenerationMode,
   RegeneratePostRequest,
 } from "../../../types/ai.types";
 import type { PostPageOption } from "./post-form-drawer";
 
 const { Text } = Typography;
 
-type TemplateValue =
-  | "PREMIUM_AUTO"
-  | "SOCIAL_BRAND"
-  | "BOLD"
-  | "SPLIT"
-  | "MINIMAL";
-
-type ImageGenerationMode = "EDITABLE_BASE" | "FINAL_AD_CREATIVE";
-
 type FormValues = {
   idea: string;
-  tone: string;
-  platform: string;
+  tone: AiTone;
+  platform: AiPlatform;
   targetPageIds: number[];
   scheduledAt?: Dayjs | null;
   creativeOptions: {
@@ -43,7 +40,7 @@ type FormValues = {
     showLogo: boolean;
     showCTA: boolean;
     showSocialLinks: boolean;
-    template?: TemplateValue | null;
+    template?: AiTemplateValue | null;
     imageGenerationMode?: ImageGenerationMode;
   };
 };
@@ -60,7 +57,7 @@ type Props = {
 
 const TEMPLATE_OPTIONS: Array<{
   label: string;
-  value: TemplateValue;
+  value: AiTemplateValue;
 }> = [
   { label: "Automático premium", value: "PREMIUM_AUTO" },
   { label: "Marca social", value: "SOCIAL_BRAND" },
@@ -77,7 +74,7 @@ const IMAGE_MODE_OPTIONS: Array<{
   { label: "Anuncio final IA", value: "FINAL_AD_CREATIVE" },
 ];
 
-const TONE_OPTIONS = [
+const TONE_OPTIONS: Array<{ label: string; value: AiTone }> = [
   { label: "Profesional", value: "PROFESIONAL" },
   { label: "Emocional", value: "EMOCIONAL" },
   { label: "Divertido", value: "DIVERTIDO" },
@@ -85,10 +82,33 @@ const TONE_OPTIONS = [
   { label: "Cercano", value: "CERCANO" },
 ];
 
-const PLATFORM_OPTIONS = [
+const PLATFORM_OPTIONS: Array<{ label: string; value: AiPlatform }> = [
   { label: "Facebook", value: "FACEBOOK" },
   { label: "Instagram", value: "INSTAGRAM" },
 ];
+
+const PREMIUM_TEMPLATES: AiTemplateValue[] = ["PREMIUM_AUTO"];
+const PREMIUM_IMAGE_MODES: ImageGenerationMode[] = ["FINAL_AD_CREATIVE"];
+
+function getErrorMessage(error: unknown) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object" &&
+    "data" in error.response
+  ) {
+    const data = error.response.data as { message?: string; error?: string };
+    return data?.message || data?.error || "No se pudo generar el post con IA";
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "No se pudo generar el post con IA";
+}
 
 export function AiGenerateDrawer({
   open,
@@ -100,12 +120,60 @@ export function AiGenerateDrawer({
   const generateMutation = useGeneratePost();
   const [messageApi, contextHolder] = message.useMessage();
 
+  const {
+    canSchedule,
+    canUseMultiPage,
+    canUsePremiumAi,
+    canUsePremiumImages,
+  } = usePlanAccess();
+
   const sortedPages = useMemo(
     () => [...pages].sort((a, b) => a.name.localeCompare(b.name)),
     [pages]
   );
 
+  const selectedPageIds = Form.useWatch("targetPageIds", form) ?? [];
+  const selectedTemplate =
+    Form.useWatch(["creativeOptions", "template"], form) ?? "PREMIUM_AUTO";
+  const selectedImageMode =
+    Form.useWatch(["creativeOptions", "imageGenerationMode"], form) ??
+    "FINAL_AD_CREATIVE";
+
+  const isPremiumTemplate = PREMIUM_TEMPLATES.includes(selectedTemplate);
+  const isPremiumImageMode = PREMIUM_IMAGE_MODES.includes(selectedImageMode);
+
   const handleFinish = async (values: FormValues) => {
+    const isTryingMultiPage = values.targetPageIds.length > 1;
+    const isTryingSchedule = !!values.scheduledAt;
+    const isTryingPremiumTemplate =
+      !!values.creativeOptions.template &&
+      PREMIUM_TEMPLATES.includes(values.creativeOptions.template);
+    const isTryingPremiumImageMode =
+      !!values.creativeOptions.imageGenerationMode &&
+      PREMIUM_IMAGE_MODES.includes(values.creativeOptions.imageGenerationMode);
+
+    if (isTryingSchedule && !canSchedule) {
+      messageApi.warning("Tu plan actual no permite programar publicaciones.");
+      return;
+    }
+
+    if (isTryingMultiPage && !canUseMultiPage) {
+      messageApi.warning(
+        "Tu plan actual no permite publicar en varias páginas al mismo tiempo."
+      );
+      return;
+    }
+
+    if (isTryingPremiumTemplate && !canUsePremiumAi) {
+      messageApi.warning("Tu plan actual no permite templates premium.");
+      return;
+    }
+
+    if (isTryingPremiumImageMode && !canUsePremiumImages) {
+      messageApi.warning("Tu plan actual no permite imágenes premium.");
+      return;
+    }
+
     const payload: GenerateFullPostRequest = {
       idea: values.idea.trim(),
       tone: values.tone,
@@ -138,12 +206,8 @@ export function AiGenerateDrawer({
       onSuccess(result, regeneratePayload);
       form.resetFields();
       onClose();
-    } catch (error: any) {
-      const backendMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        "No se pudo generar el post con IA";
-      messageApi.error(backendMessage);
+    } catch (error) {
+      messageApi.error(getErrorMessage(error));
     }
   };
 
@@ -177,6 +241,33 @@ export function AiGenerateDrawer({
             },
           }}
         >
+          {!canUseMultiPage && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="Tu plan actual permite una sola página por generación."
+            />
+          )}
+
+          {!canSchedule && (
+            <Alert
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="La programación de publicaciones no está disponible en tu plan actual."
+            />
+          )}
+
+          {(!canUsePremiumAi || !canUsePremiumImages) && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="Algunas opciones creativas premium están limitadas por tu plan."
+            />
+          )}
+
           <Form.Item
             label="Idea"
             name="idea"
@@ -217,10 +308,27 @@ export function AiGenerateDrawer({
                 min: 1,
                 message: "Debes seleccionar al menos una página",
               },
+              {
+                validator: async (_, value: number[] | undefined) => {
+                  const selected = value ?? [];
+                  if (selected.length <= 1) return;
+                  if (!canUseMultiPage) {
+                    throw new Error(
+                      "Tu plan actual no permite seleccionar varias páginas."
+                    );
+                  }
+                },
+              },
             ]}
+            extra={
+              !canUseMultiPage
+                ? "Tu plan actual permite seleccionar solo una página."
+                : "Puedes seleccionar una o más páginas."
+            }
           >
             <Select
               mode="multiple"
+              maxCount={canUseMultiPage ? undefined : 1}
               placeholder="Selecciona una o más páginas"
               options={sortedPages.map((page) => ({
                 label: page.name,
@@ -234,12 +342,17 @@ export function AiGenerateDrawer({
           <Form.Item
             label="Programar para"
             name="scheduledAt"
-            extra="Opcional. Si envías fecha, el backend puede crear el post como programado."
+            extra={
+              canSchedule
+                ? "Opcional. Si envías fecha, el backend puede crear el post como programado."
+                : "Tu plan actual no permite programación."
+            }
           >
             <DatePicker
               showTime
               style={{ width: "100%" }}
               format="YYYY-MM-DD HH:mm:ss"
+              disabled={!canSchedule}
               disabledDate={(current) =>
                 current ? current.isBefore(dayjs().startOf("day")) : false
               }
@@ -251,30 +364,86 @@ export function AiGenerateDrawer({
           <Form.Item
             label="Template"
             name={["creativeOptions", "template"]}
-            rules={[{ required: true, message: "Selecciona un template" }]}
+            rules={[
+              { required: true, message: "Selecciona un template" },
+              {
+                validator: async (_, value: AiTemplateValue | undefined) => {
+                  if (!value) return;
+                  if (PREMIUM_TEMPLATES.includes(value) && !canUsePremiumAi) {
+                    throw new Error(
+                      "Tu plan actual no permite templates premium."
+                    );
+                  }
+                },
+              },
+            ]}
             extra={
               <Text type="secondary">
-                Usa <strong>Automático premium</strong> para mantener el flujo
-                premium del backend.
+                {canUsePremiumAi
+                  ? "Usa Automático premium para mantener el flujo premium del backend."
+                  : "Los templates premium no están disponibles en tu plan actual."}
               </Text>
             }
           >
-            <Select options={TEMPLATE_OPTIONS} />
+            <Select
+              options={TEMPLATE_OPTIONS.map((option) => ({
+                ...option,
+                disabled:
+                  PREMIUM_TEMPLATES.includes(option.value) && !canUsePremiumAi,
+              }))}
+            />
           </Form.Item>
 
           <Form.Item
             label="Modo de generación"
             name={["creativeOptions", "imageGenerationMode"]}
-            rules={[{ required: true, message: "Selecciona un modo" }]}
+            rules={[
+              { required: true, message: "Selecciona un modo" },
+              {
+                validator: async (
+                  _,
+                  value: ImageGenerationMode | undefined
+                ) => {
+                  if (!value) return;
+                  if (
+                    PREMIUM_IMAGE_MODES.includes(value) &&
+                    !canUsePremiumImages
+                  ) {
+                    throw new Error(
+                      "Tu plan actual no permite modos premium de generación de imagen."
+                    );
+                  }
+                },
+              },
+            ]}
             extra={
               <Text type="secondary">
-                Usa <strong>Anuncio final IA</strong> para que la IA genere una
-                pieza casi completa y el backend solo remate branding.
+                {canUsePremiumImages
+                  ? "Usa Anuncio final IA para que la IA genere una pieza casi completa y el backend solo remate branding."
+                  : "Los modos premium de imagen no están disponibles en tu plan actual."}
               </Text>
             }
           >
-            <Select options={IMAGE_MODE_OPTIONS} />
+            <Select
+              options={IMAGE_MODE_OPTIONS.map((option) => ({
+                ...option,
+                disabled:
+                  PREMIUM_IMAGE_MODES.includes(option.value) &&
+                  !canUsePremiumImages,
+              }))}
+            />
           </Form.Item>
+
+          {(selectedPageIds.length > 1 && !canUseMultiPage) ||
+          (isPremiumTemplate && !canUsePremiumAi) ||
+          (isPremiumImageMode && !canUsePremiumImages) ? (
+            <Alert
+              type="error"
+              showIcon
+              style={{ marginBottom: 16 }}
+              message="Hay opciones seleccionadas que no están disponibles en tu plan."
+            />
+          ) : null}
 
           <Space
             direction="vertical"
@@ -323,6 +492,7 @@ export function AiGenerateDrawer({
             htmlType="submit"
             block
             loading={generateMutation.isPending}
+            disabled={pages.length === 0}
           >
             Generar con IA
           </Button>

@@ -25,10 +25,12 @@ import {
   MenuUnfoldOutlined,
   BulbOutlined,
   ShareAltOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../../app/store/auth.store";
 import { useThemeStore } from "../../app/store/theme.store";
+import { useCurrentUser } from "../../features/users/hooks/use-current-user";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -47,6 +49,8 @@ const formatOrganizationName = (value: string) => {
 const roleMap: Record<string, string> = {
   OWNER: "Propietario",
   ADMIN: "Administrador",
+  EDITOR: "Editor",
+  VIEWER: "Visualizador",
   USER: "Usuario",
   SUPER_ADMIN: "Super administrador",
 };
@@ -54,6 +58,8 @@ const roleMap: Record<string, string> = {
 const roleColorMap: Record<string, string> = {
   OWNER: "blue",
   ADMIN: "purple",
+  EDITOR: "green",
+  VIEWER: "default",
   USER: "default",
   SUPER_ADMIN: "gold",
 };
@@ -67,9 +73,11 @@ export function AppLayout() {
   const logout = useAuthStore((state) => state.logout);
   const schema = useAuthStore((state) => state.schema);
   const role = useAuthStore((state) => state.role);
+  const userId = useAuthStore((state) => state.userId);
+
+  const { data: currentUser } = useCurrentUser(userId);
 
   const { mode, toggleTheme } = useThemeStore();
-
   const isDark = mode === "dark";
 
   const [collapsed, setCollapsed] = useState(() => {
@@ -90,8 +98,8 @@ export function AppLayout() {
     }
   }, [location.pathname, isMobile]);
 
-  const items: MenuProps["items"] = useMemo(
-    () => [
+  const items: MenuProps["items"] = useMemo(() => {
+    const baseItems: MenuProps["items"] = [
       {
         key: "/app/dashboard",
         icon: <DashboardOutlined />,
@@ -128,24 +136,59 @@ export function AppLayout() {
         label: "Billing",
         title: "Billing",
       },
-
       {
         key: "/app/referrals",
         icon: <ShareAltOutlined />,
         label: "Referrals",
-        title: "Referrals"
-      }
-    ],
-    []
-  );
+        title: "Referrals",
+      },
+    ];
 
-  const displayOrganization = formatOrganizationName(
-    schema || "Organización"
-  );
+    if (role === "OWNER" || role === "ADMIN") {
+      baseItems.splice(6, 0, {
+        key: "/app/users",
+        icon: <UserOutlined />,
+        label: "Users",
+        title: "Users",
+      });
+    }
+
+    return baseItems;
+  }, [role]);
+
+  const displayOrganization = formatOrganizationName(schema || "Organización");
   const displayRole = roleMap[role || "USER"] || "Usuario";
   const roleColor = roleColorMap[role || "USER"] || "default";
 
+  const displayName = currentUser?.name?.trim() || "Mi cuenta";
+  const displayEmail = currentUser?.email?.trim() || "Sesión activa";
+  const avatarInitial =
+    currentUser?.name?.trim()?.charAt(0)?.toUpperCase() ||
+    currentUser?.email?.trim()?.charAt(0)?.toUpperCase() ||
+    "U";
+
   const userMenuItems: MenuProps["items"] = [
+    {
+      key: "account",
+      icon: <UserOutlined />,
+      label: "Mi cuenta",
+      onClick: () => navigate("/app/account"),
+    },
+    {
+      key: "settings",
+      icon: <SettingOutlined />,
+      label: "Ajustes",
+      onClick: () => navigate("/app/settings"),
+    },
+    {
+      key: "billing",
+      icon: <CreditCardOutlined />,
+      label: "Billing",
+      onClick: () => navigate("/app/billing"),
+    },
+    {
+      type: "divider",
+    },
     {
       key: "logout",
       icon: <LogoutOutlined />,
@@ -557,27 +600,44 @@ export function AppLayout() {
               >
                 <Avatar
                   size={isMobile ? 36 : 40}
-                  icon={<UserOutlined />}
                   style={{
                     backgroundColor: isDark ? "#1e293b" : "#e2e8f0",
                     color: isDark ? "#cbd5e1" : "#334155",
                     border: isDark
                       ? "1px solid rgba(148, 163, 184, 0.18)"
                       : "1px solid rgba(15, 23, 42, 0.08)",
+                    fontWeight: 700,
                   }}
-                />
+                >
+                  {avatarInitial}
+                </Avatar>
+
                 {!isMobile && (
-                  <Space direction="vertical" size={0}>
-                    <Text strong style={{ color: isDark ? "#ffffff" : "#0f172a" }}>
-                      Mi cuenta
+                  <Space
+                    direction="vertical"
+                    size={0}
+                    style={{ minWidth: 0, lineHeight: 1.1 }}
+                  >
+                    <Text
+                      strong
+                      style={{
+                        color: isDark ? "#ffffff" : "#0f172a",
+                        maxWidth: 180,
+                      }}
+                      ellipsis
+                    >
+                      {displayName}
                     </Text>
+
                     <Text
                       style={{
                         fontSize: 12,
                         color: isDark ? "#94a3b8" : "#64748b",
+                        maxWidth: 180,
                       }}
+                      ellipsis
                     >
-                      Sesión activa
+                      {displayEmail}
                     </Text>
                   </Space>
                 )}
@@ -589,9 +649,7 @@ export function AppLayout() {
         <Content style={{ margin: isMobile ? 16 : 20 }}>
           <div
             style={{
-              minHeight: isMobile
-                ? "calc(100vh - 108px)"
-                : "calc(100vh - 116px)",
+              minHeight: isMobile ? "calc(100vh - 108px)" : "calc(100vh - 116px)",
               background: "transparent",
               borderRadius: 20,
               padding: 0,

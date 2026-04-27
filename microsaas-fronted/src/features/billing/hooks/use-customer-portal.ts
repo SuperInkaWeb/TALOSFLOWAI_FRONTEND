@@ -3,6 +3,6 @@ import { billingService } from "../../../services/billing.service";
 
 export function useCustomerPortal() {
   return useMutation({
-    mutationFn: () => billingService.createCustomerPortal(),
+    mutationFn: billingService.createCustomerPortal,
   });
 }

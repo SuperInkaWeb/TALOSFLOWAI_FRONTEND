@@ -16,8 +16,11 @@ import {
   LinkOutlined,
   RobotOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import { useDashboardSummary } from "../features/dashboard/hooks/use-dashboard-summary";
+import { useAppOnboarding } from "../features/dashboard/hooks/use-app-onboarding";
 import { useThemeStore } from "../app/store/theme.store";
+import { AppOnboarding } from "../components/common/app-onboarding";
 import { PostPreview } from "../components/PostPreview";
 
 const { Title, Text } = Typography;
@@ -51,7 +54,9 @@ function renderStatusTag(status: string) {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useDashboardSummary();
+  const { open, close } = useAppOnboarding();
   const { mode } = useThemeStore();
 
   const isDark = mode === "dark";
@@ -69,6 +74,14 @@ export function DashboardPage() {
   if (isError || !data) {
     return (
       <div style={{ padding: 16 }}>
+        <AppOnboarding
+          open={open}
+          onClose={close}
+          onGoBranding={() => navigate("/app/branding")}
+          onGoSocialAccounts={() => navigate("/app/social-accounts")}
+          onGoAi={() => navigate("/app/ai")}
+        />
+
         <Alert
           type="error"
           showIcon
@@ -94,6 +107,14 @@ export function DashboardPage() {
   return (
     <div style={{ padding: 16 }}>
       <Space direction="vertical" size={20} style={{ width: "100%" }}>
+        <AppOnboarding
+          open={open}
+          onClose={close}
+          onGoBranding={() => navigate("/app/branding")}
+          onGoSocialAccounts={() => navigate("/app/social-accounts")}
+          onGoAi={() => navigate("/app/ai")}
+        />
+
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <img
             src="/taloslogo.png"

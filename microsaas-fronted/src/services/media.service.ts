@@ -4,6 +4,16 @@ export type MediaUploadResponse = {
   url: string;
 };
 
+function validateResponse(data: any): MediaUploadResponse {
+  if (!data || typeof data.url !== "string" || data.url.length === 0) {
+    throw new Error("Respuesta inválida del servidor al subir imagen");
+  }
+
+  return {
+    url: data.url,
+  };
+}
+
 export const mediaService = {
   async uploadAsset(file: File): Promise<MediaUploadResponse> {
     const formData = new FormData();
@@ -11,14 +21,10 @@ export const mediaService = {
 
     const response = await api.post<MediaUploadResponse>(
       "/media/upload",
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
+      // ❌ NO headers aquí
     );
 
-    return response.data;
+    return validateResponse(response.data);
   },
 };

@@ -1,4 +1,4 @@
-import { Button, Popconfirm, Space, message } from "antd";
+import { Button, Popconfirm, Space, Tag, message } from "antd";
 import type { PostItem } from "../../../types/post.types";
 import { useCancelPost } from "../hooks/use-cancel-post";
 import { usePublishPost } from "../hooks/use-publish-post";
@@ -8,6 +8,26 @@ type Props = {
   post: PostItem;
   onEdit: (post: PostItem) => void;
 };
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object" &&
+    "data" in error.response
+  ) {
+    const data = error.response.data as { message?: string; error?: string };
+    return data?.message || data?.error || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
 
 export function PostActions({ post, onEdit }: Props) {
   const publishMutation = usePublishPost();
@@ -24,8 +44,8 @@ export function PostActions({ post, onEdit }: Props) {
       await publishMutation.mutateAsync(post.id);
       message.success("Publicación enviada correctamente");
     } catch (error) {
-      message.error("No se pudo publicar");
       console.error(error);
+      message.error(getErrorMessage(error, "No se pudo publicar"));
     }
   };
 
@@ -34,8 +54,8 @@ export function PostActions({ post, onEdit }: Props) {
       await cancelMutation.mutateAsync(post.id);
       message.success("Publicación cancelada correctamente");
     } catch (error) {
-      message.error("No se pudo cancelar");
       console.error(error);
+      message.error(getErrorMessage(error, "No se pudo cancelar"));
     }
   };
 
@@ -44,8 +64,8 @@ export function PostActions({ post, onEdit }: Props) {
       await restoreMutation.mutateAsync(post.id);
       message.success("Publicación restaurada correctamente");
     } catch (error) {
-      message.error("No se pudo restaurar");
       console.error(error);
+      message.error(getErrorMessage(error, "No se pudo restaurar"));
     }
   };
 
@@ -65,7 +85,7 @@ export function PostActions({ post, onEdit }: Props) {
           okText="Sí"
           cancelText="No"
         >
-          <Button type="primary" loading={isLoading}>
+          <Button type="primary" loading={publishMutation.isPending} disabled={isLoading}>
             Publicar
           </Button>
         </Popconfirm>
@@ -79,7 +99,7 @@ export function PostActions({ post, onEdit }: Props) {
           okText="Sí"
           cancelText="No"
         >
-          <Button danger loading={isLoading}>
+          <Button danger loading={cancelMutation.isPending} disabled={isLoading}>
             Cancelar
           </Button>
         </Popconfirm>
@@ -93,14 +113,16 @@ export function PostActions({ post, onEdit }: Props) {
           okText="Sí"
           cancelText="No"
         >
-          <Button loading={isLoading}>Restaurar</Button>
+          <Button loading={restoreMutation.isPending} disabled={isLoading}>
+            Restaurar
+          </Button>
         </Popconfirm>
       )}
 
       {(post.status === "PUBLISHED" ||
         post.status === "FAILED" ||
         post.status === "PROCESSING") && (
-        <Button disabled>Sin acciones</Button>
+        <Tag color="default">Sin acciones</Tag>
       )}
     </Space>
   );

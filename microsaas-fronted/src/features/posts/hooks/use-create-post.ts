@@ -7,13 +7,14 @@ export function useCreatePost() {
 
   return useMutation({
     mutationFn: (payload: CreatePostRequest) => postService.createPost(payload),
+
     onSuccess: async (createdPost) => {
       queryClient.setQueryData(["post", createdPost.id], createdPost);
 
-      await queryClient.invalidateQueries({ queryKey: ["posts"] });
-      await queryClient.refetchQueries({ queryKey: ["posts"] });
-
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }),
+      ]);
     },
   });
 }

@@ -10,32 +10,35 @@ export const aiService = {
   async generateFullPost(
     payload: GenerateFullPostRequest
   ): Promise<GenerateFullPostResponse> {
-    const { data } = await api.post<GenerateFullPostResponse>(
+    const response = await api.post<GenerateFullPostResponse>(
       "/ai/generate-full-post",
       payload
     );
-    return data;
+
+    return response.data;
   },
 
   async regenerateText(
     postId: number,
     payload: RegeneratePostRequest
   ): Promise<PostItem> {
-    const { data } = await api.post<PostItem>(
+    const response = await api.post<PostItem>(
       `/ai/posts/${postId}/regenerate-text`,
       payload
     );
-    return data;
+
+    return response.data;
   },
 
   async regenerateImage(
     postId: number,
     payload: RegeneratePostRequest
   ): Promise<PostItem> {
-    const { data } = await api.post<PostItem>(
+    const response = await api.post<PostItem>(
       `/ai/posts/${postId}/regenerate-image`,
       payload
     );
-    return data;
+
+    return response.data;
   },
 };

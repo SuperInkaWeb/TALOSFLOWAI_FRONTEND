@@ -11,7 +11,10 @@ export function useGeneratePost() {
   return useMutation<GenerateFullPostResponse, Error, GenerateFullPostRequest>({
     mutationFn: aiService.generateFullPost,
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["posts"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["posts"] }),
+        queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] }),
+      ]);
     },
   });
 }

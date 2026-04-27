@@ -3,12 +3,12 @@ import type {
   CreatePostRequest,
   PagedResponse,
   PostItem,
+  PostStatus,
   ReschedulePostRequest,
   UpdatePostRequest,
-  PostStatus,
 } from "../types/post.types";
 
-type GetPostsParams = {
+export type GetPostsParams = {
   page?: number;
   size?: number;
   status?: PostStatus;
@@ -39,7 +39,10 @@ export const postService = {
     return response.data;
   },
 
-  async updatePost(postId: number, payload: UpdatePostRequest): Promise<PostItem> {
+  async updatePost(
+    postId: number,
+    payload: UpdatePostRequest
+  ): Promise<PostItem> {
     const response = await api.put<PostItem>(`/posts/${postId}`, payload);
     return response.data;
   },
@@ -58,7 +61,10 @@ export const postService = {
     postId: number,
     payload: ReschedulePostRequest
   ): Promise<PostItem> {
-    const response = await api.patch<PostItem>(`/posts/${postId}/reschedule`, payload);
+    const response = await api.patch<PostItem>(
+      `/posts/${postId}/reschedule`,
+      payload
+    );
     return response.data;
   },
 

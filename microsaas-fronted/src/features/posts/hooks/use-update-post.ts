@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postService } from "../../../services/post.service";
 import type {
-  PagedResponse,
   PostItem,
   UpdatePostRequest,
 } from "../../../types/post.types";
+import { syncPostCaches } from "../utils/post-cache.helpers";
 
 type UpdatePostPayload = {
   postId: number;
@@ -21,16 +21,21 @@ function matchesUpdatedData(post: PostItem, data: UpdatePostRequest) {
 
   const sameMediaUrl =
     data.mediaUrl === undefined ||
-    normalizeNullableString(post.mediaUrl) === normalizeNullableString(data.mediaUrl);
+    normalizeNullableString(post.mediaUrl) ===
+      normalizeNullableString(data.mediaUrl);
 
   const sameScheduledAt =
     data.scheduledAt === undefined ||
-    normalizeNullableString(post.scheduledAt) === normalizeNullableString(data.scheduledAt);
+    normalizeNullableString(post.scheduledAt) ===
+      normalizeNullableString(data.scheduledAt);
 
   const sameTargets =
     data.targetPageIds === undefined ||
-    JSON.stringify([...post.targets.map((t) => t.socialPageId)].sort((a, b) => a - b)) ===
-      JSON.stringify([...data.targetPageIds].sort((a, b) => a - b));
+    JSON.stringify(
+      [...post.targets.map((target) => target.socialPageId)].sort(
+        (a, b) => a - b
+      )
+    ) === JSON.stringify([...data.targetPageIds].sort((a, b) => a - b));
 
   return sameContent && sameMediaUrl && sameScheduledAt && sameTargets;
 }
@@ -59,24 +64,8 @@ export function useUpdatePost() {
       }
     },
 
-    onSuccess: (updatedPost) => {
-      queryClient.setQueryData(["post", updatedPost.id], updatedPost);
-
-      queryClient.setQueriesData(
-        { queryKey: ["posts"] },
-        (oldData: PagedResponse<PostItem> | undefined) => {
-          if (!oldData) return oldData;
-
-          return {
-            ...oldData,
-            items: oldData.items.map((item) =>
-              item.id === updatedPost.id ? updatedPost : item
-            ),
-          };
-        }
-      );
-
-      queryClient.setQueryData(["dashboard-summary"], (oldData: unknown) => oldData);
+    onSuccess: async (updatedPost) => {
+      await syncPostCaches(queryClient, updatedPost);
     },
   });
 }

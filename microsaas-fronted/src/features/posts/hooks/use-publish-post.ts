@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { postService } from "../../../services/post.service";
-import type { PagedResponse, PostItem } from "../../../types/post.types";
+import type { PostItem } from "../../../types/post.types";
+import { syncPostCaches } from "../utils/post-cache.helpers";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -10,19 +11,24 @@ async function getFreshPublishedPost(postId: number): Promise<PostItem> {
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     await sleep(500);
 
-    const freshPost = await postService.getPostById(postId);
+    try {
+      const freshPost = await postService.getPostById(postId);
 
-    const targetCompleted =
-      freshPost.targets?.every(
-        (target) => target.status === "SUCCESS" || target.status === "FAILED"
-      ) ?? false;
+      const targetCompleted =
+        !!freshPost.targets?.length &&
+        freshPost.targets.every(
+          (target) => target.status === "SUCCESS" || target.status === "FAILED"
+        );
 
-    if (
-      freshPost.status === "PUBLISHED" ||
-      freshPost.status === "FAILED" ||
-      targetCompleted
-    ) {
-      return freshPost;
+      if (
+        freshPost.status === "PUBLISHED" ||
+        freshPost.status === "FAILED" ||
+        targetCompleted
+      ) {
+        return freshPost;
+      }
+    } catch (error) {
+      console.error("Error consultando post publicado:", error);
     }
   }
 
@@ -38,24 +44,7 @@ export function usePublishPost() {
       return getFreshPublishedPost(postId);
     },
     onSuccess: async (freshPost) => {
-      queryClient.setQueryData(["post", freshPost.id], freshPost);
-
-      queryClient.setQueriesData(
-        { queryKey: ["posts"] },
-        (oldData: PagedResponse<PostItem> | undefined) => {
-          if (!oldData) return oldData;
-
-          return {
-            ...oldData,
-            items: oldData.items.map((item) =>
-              item.id === freshPost.id ? freshPost : item
-            ),
-          };
-        }
-      );
-
-      await queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+      await syncPostCaches(queryClient, freshPost);
     },
   });
 }

@@ -1,12 +1,18 @@
 import { api } from "./api";
 import type {
   BillingCheckoutSessionResponse,
+  BillingPlanResponse,
   BillingPortalResponse,
   BillingSubscriptionResponse,
   BillingUsageResponse,
 } from "../types/billing.types";
 
 export const billingService = {
+  async getPlans(): Promise<BillingPlanResponse[]> {
+    const { data } = await api.get<BillingPlanResponse[]>("/billing/plans");
+    return data;
+  },
+
   async getSubscription(): Promise<BillingSubscriptionResponse> {
     const { data } = await api.get<BillingSubscriptionResponse>(
       "/billing/subscription"

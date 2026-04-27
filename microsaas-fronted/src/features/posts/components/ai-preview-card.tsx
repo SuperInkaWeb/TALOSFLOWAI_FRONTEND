@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   Alert,
   Button,
@@ -19,7 +20,7 @@ import type {
   GenerateFullPostResponse,
   RegeneratePostRequest,
 } from "../../../types/ai.types";
-import type { PostItem } from "../../../types/post.types";
+import type { PostItem, PostStatus } from "../../../types/post.types";
 
 const { Paragraph, Text, Title } = Typography;
 
@@ -33,7 +34,7 @@ type Props = {
   onPostUpdated?: (post: PostItem) => void;
 };
 
-function formatStatusLabel(status: string) {
+function formatStatusLabel(status: PostStatus) {
   switch (status) {
     case "DRAFT":
       return "BORRADOR";
@@ -52,7 +53,7 @@ function formatStatusLabel(status: string) {
   }
 }
 
-function getStatusColor(status: string) {
+function getStatusColor(status: PostStatus) {
   switch (status) {
     case "DRAFT":
       return "default";
@@ -86,6 +87,84 @@ function prettifyScoreKey(key: string) {
   return labels[key] ?? key;
 }
 
+function clampPercent(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object" &&
+    "data" in error.response
+  ) {
+    const data = error.response.data as { message?: string; error?: string };
+    return data?.message || data?.error || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function getTopAlert(status: PostStatus) {
+  switch (status) {
+    case "DRAFT":
+      return {
+        type: "success" as const,
+        message: "Contenido generado correctamente",
+        description:
+          "Ya puedes revisarlo, regenerarlo, editarlo o abrir el post para continuar el flujo.",
+      };
+    case "SCHEDULED":
+      return {
+        type: "info" as const,
+        message: "Contenido generado y programado",
+        description:
+          "El post ya tiene una fecha programada. Puedes revisarlo o ajustarlo.",
+      };
+    case "PROCESSING":
+      return {
+        type: "warning" as const,
+        message: "Contenido en procesamiento",
+        description:
+          "La publicación todavía está en proceso. Revisa el estado en unos momentos.",
+      };
+    case "FAILED":
+      return {
+        type: "error" as const,
+        message: "La generación o publicación tuvo problemas",
+        description:
+          "Puedes revisar el contenido, regenerarlo o abrir el post para corregirlo.",
+      };
+    case "PUBLISHED":
+      return {
+        type: "success" as const,
+        message: "Contenido publicado",
+        description:
+          "El post ya fue publicado. Puedes revisar el resultado y los detalles.",
+      };
+    case "CANCELED":
+      return {
+        type: "warning" as const,
+        message: "Contenido cancelado",
+        description:
+          "El post fue cancelado. Puedes abrirlo para revisar qué hacer después.",
+      };
+    default:
+      return {
+        type: "info" as const,
+        message: "Resultado disponible",
+        description: "Revisa el contenido generado.",
+      };
+  }
+}
+
 export function AiPreviewCard({
   post,
   regeneratePayload,
@@ -99,27 +178,42 @@ export function AiPreviewCard({
   const regenerateTextMutation = useRegeneratePostText();
   const regenerateImageMutation = useRegeneratePostImage();
 
-  const hashtags = post.copyBlocks?.hashtags ?? [];
-  const qualityEntries = post.qualityScore
-    ? Object.entries(post.qualityScore)
-    : [];
+  const isBusy =
+    regenerateTextMutation.isPending || regenerateImageMutation.isPending;
 
-  const totalScoreRaw = post.qualityScore?.total;
-  const totalScore =
-    typeof totalScoreRaw === "number"
-      ? totalScoreRaw
-      : Number(totalScoreRaw ?? 0);
+  const hashtags = useMemo(() => post.copyBlocks?.hashtags ?? [], [post.copyBlocks]);
 
-  const metricEntries = qualityEntries.filter(
-    ([key, value]) =>
-      key !== "total" &&
-      key !== "notes" &&
-      value !== null &&
-      value !== undefined &&
-      typeof value !== "string"
+  const qualityEntries = useMemo(
+    () => (post.qualityScore ? Object.entries(post.qualityScore) : []),
+    [post.qualityScore]
+  );
+
+  const totalScore = useMemo(() => {
+    const totalScoreRaw = post.qualityScore?.total;
+    const value =
+      typeof totalScoreRaw === "number"
+        ? totalScoreRaw
+        : Number(totalScoreRaw ?? 0);
+
+    return clampPercent(value);
+  }, [post.qualityScore]);
+
+  const metricEntries = useMemo(
+    () =>
+      qualityEntries.filter(
+        ([key, value]) =>
+          key !== "total" &&
+          key !== "notes" &&
+          value !== null &&
+          value !== undefined &&
+          typeof value !== "string"
+      ),
+    [qualityEntries]
   );
 
   const notes = post.qualityScore?.notes;
+  const status = post.status as PostStatus;
+  const topAlert = getTopAlert(status);
 
   const handleRegenerateText = async () => {
     try {
@@ -130,12 +224,8 @@ export function AiPreviewCard({
 
       messageApi.success("Texto regenerado correctamente");
       onPostUpdated?.(updatedPost);
-    } catch (error: any) {
-      const backendMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        "No se pudo regenerar el texto";
-      messageApi.error(backendMessage);
+    } catch (error) {
+      messageApi.error(getErrorMessage(error, "No se pudo regenerar el texto"));
     }
   };
 
@@ -148,12 +238,8 @@ export function AiPreviewCard({
 
       messageApi.success("Imagen regenerada correctamente");
       onPostUpdated?.(updatedPost);
-    } catch (error: any) {
-      const backendMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        "No se pudo regenerar la imagen";
-      messageApi.error(backendMessage);
+    } catch (error) {
+      messageApi.error(getErrorMessage(error, "No se pudo regenerar la imagen"));
     }
   };
 
@@ -163,7 +249,7 @@ export function AiPreviewCard({
 
       <Card
         style={{ borderRadius: 18, marginBottom: 24 }}
-        bodyStyle={{ padding: 24 }}
+        styles={{ body: { padding: 24 } }}
       >
         <div
           style={{
@@ -194,11 +280,16 @@ export function AiPreviewCard({
           </div>
 
           <Space wrap>
-            <Button onClick={onNewGenerate}>Nueva generación</Button>
+            {onNewGenerate && (
+              <Button onClick={onNewGenerate} disabled={isBusy}>
+                Nueva generación
+              </Button>
+            )}
 
             <Button
               loading={regenerateTextMutation.isPending}
               onClick={handleRegenerateText}
+              disabled={isBusy && !regenerateTextMutation.isPending}
             >
               Regenerar texto
             </Button>
@@ -206,30 +297,44 @@ export function AiPreviewCard({
             <Button
               loading={regenerateImageMutation.isPending}
               onClick={handleRegenerateImage}
+              disabled={isBusy && !regenerateImageMutation.isPending}
             >
               Regenerar imagen
             </Button>
 
-            <Button onClick={() => onEditPost?.(post.postId)}>
-              Editar post
-            </Button>
+            {onEditPost && (
+              <Button
+                onClick={() => onEditPost(post.postId)}
+                disabled={isBusy}
+              >
+                Editar post
+              </Button>
+            )}
 
-            <Button type="primary" onClick={() => onOpenPost?.(post.postId)}>
-              Ir al post
-            </Button>
+            {onOpenPost && (
+              <Button
+                type="primary"
+                onClick={() => onOpenPost(post.postId)}
+                disabled={isBusy}
+              >
+                Ir al post
+              </Button>
+            )}
 
-            <Button type="text" onClick={onClosePreview}>
-              Cerrar
-            </Button>
+            {onClosePreview && (
+              <Button type="text" onClick={onClosePreview} disabled={isBusy}>
+                Cerrar
+              </Button>
+            )}
           </Space>
         </div>
 
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
           <Alert
-            type="success"
+            type={topAlert.type}
             showIcon
-            message="Contenido generado correctamente"
-            description="Ya puedes revisarlo, regenerarlo, editarlo o abrir el post para continuar el flujo."
+            message={topAlert.message}
+            description={topAlert.description}
             style={{ borderRadius: 12 }}
           />
 
@@ -247,8 +352,8 @@ export function AiPreviewCard({
               <Card size="small" style={{ borderRadius: 14 }}>
                 <Text type="secondary">Estado</Text>
                 <div style={{ marginTop: 8 }}>
-                  <Tag color={getStatusColor(post.status)}>
-                    {formatStatusLabel(post.status)}
+                  <Tag color={getStatusColor(status)}>
+                    {formatStatusLabel(status)}
                   </Tag>
                 </div>
               </Card>
@@ -410,10 +515,7 @@ export function AiPreviewCard({
                       <div>
                         <Text strong>Quality score total</Text>
                         <div style={{ marginTop: 12 }}>
-                          <Progress
-                            percent={Number.isFinite(totalScore) ? totalScore : 0}
-                            status="active"
-                          />
+                          <Progress percent={totalScore} status="active" />
                         </div>
                       </div>
 

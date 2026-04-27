@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
@@ -11,8 +10,10 @@ import {
   Typography,
   message,
 } from "antd";
-import { postService } from "../../../services/post.service";
-import type { PagedResponse, PostItem } from "../../../types/post.types";
+import type { PostItem, PostStatus, PostTargetStatus } from "../../../types/post.types";
+import { usePublishPost } from "../hooks/use-publish-post";
+import { useCancelPost } from "../hooks/use-cancel-post";
+import { useRestorePost } from "../hooks/use-restore-post";
 import { useRetryPost } from "../hooks/use-retry-post";
 import { diagnosePostError } from "../utils/post-error-diagnosis";
 
@@ -27,7 +28,7 @@ type Props = {
   onRegenerateText?: (post: PostItem) => void;
 };
 
-function getStatusColor(status: string) {
+function getStatusColor(status: PostStatus) {
   switch (status) {
     case "DRAFT":
       return "default";
@@ -46,7 +47,7 @@ function getStatusColor(status: string) {
   }
 }
 
-function getStatusLabel(status: string) {
+function getStatusLabel(status: PostStatus) {
   switch (status) {
     case "DRAFT":
       return "Borrador";
@@ -65,18 +66,48 @@ function getStatusLabel(status: string) {
   }
 }
 
-function updatePostInPagedCache(
-  oldData: PagedResponse<PostItem> | undefined,
-  updatedPost: PostItem
-): PagedResponse<PostItem> | undefined {
-  if (!oldData) return oldData;
+function getTargetAlertType(status: PostTargetStatus) {
+  switch (status) {
+    case "SUCCESS":
+      return "success" as const;
+    case "FAILED":
+      return "error" as const;
+    case "PENDING":
+      return "info" as const;
+    case "CANCELED":
+      return "warning" as const;
+    default:
+      return "info" as const;
+  }
+}
 
-  return {
-    ...oldData,
-    items: oldData.items.map((item) =>
-      item.id === updatedPost.id ? updatedPost : item
-    ),
-  };
+function getErrorMessage(error: unknown, fallback: string) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "response" in error &&
+    error.response &&
+    typeof error.response === "object" &&
+    "data" in error.response
+  ) {
+    const data = error.response.data as { message?: string; error?: string };
+    return data?.message || data?.error || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback;
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "No disponible";
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+
+  return parsed.toLocaleString("es-EC");
 }
 
 export function PostDetailDrawer({
@@ -87,95 +118,15 @@ export function PostDetailDrawer({
   onRegenerateImage,
   onRegenerateText,
 }: Props) {
-  const queryClient = useQueryClient();
-
   const diagnosis = useMemo(() => {
     if (!post) return null;
     return diagnosePostError(post.errorMessage);
   }, [post]);
 
-  const publishMutation = useMutation({
-    mutationFn: (postId: number) => postService.publishPost(postId),
-    onSuccess: (updatedPost) => {
-      queryClient.setQueryData(["post", updatedPost.id], updatedPost);
-
-      queryClient.setQueriesData(
-        { queryKey: ["posts"] },
-        (oldData: PagedResponse<PostItem> | undefined) =>
-          updatePostInPagedCache(oldData, updatedPost)
-      );
-
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["post", updatedPost.id] });
-
-      message.success("Publicación realizada correctamente");
-    },
-    onError: (error: any) => {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        "No se pudo publicar el post";
-
-      message.error(errorMessage);
-    },
-  });
-
-  const cancelMutation = useMutation({
-    mutationFn: (postId: number) => postService.cancelPost(postId),
-    onSuccess: (updatedPost) => {
-      queryClient.setQueryData(["post", updatedPost.id], updatedPost);
-
-      queryClient.setQueriesData(
-        { queryKey: ["posts"] },
-        (oldData: PagedResponse<PostItem> | undefined) =>
-          updatePostInPagedCache(oldData, updatedPost)
-      );
-
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["post", updatedPost.id] });
-
-      message.success("Post cancelado correctamente");
-    },
-    onError: (error: any) => {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        "No se pudo cancelar el post";
-
-      message.error(errorMessage);
-    },
-  });
-
-  const restoreMutation = useMutation({
-    mutationFn: (postId: number) => postService.restorePost(postId),
-    onSuccess: (updatedPost) => {
-      queryClient.setQueryData(["post", updatedPost.id], updatedPost);
-
-      queryClient.setQueriesData(
-        { queryKey: ["posts"] },
-        (oldData: PagedResponse<PostItem> | undefined) =>
-          updatePostInPagedCache(oldData, updatedPost)
-      );
-
-      queryClient.invalidateQueries({ queryKey: ["posts"] });
-      queryClient.invalidateQueries({ queryKey: ["post", updatedPost.id] });
-
-      message.success("Post restaurado correctamente");
-    },
-    onError: (error: any) => {
-      const errorMessage =
-        error?.response?.data?.message ||
-        error?.response?.data?.error ||
-        error?.message ||
-        "No se pudo restaurar el post";
-
-      message.error(errorMessage);
-    },
-  });
-
-  const { mutate: retryPost, isPending: isRetrying } = useRetryPost();
+  const publishMutation = usePublishPost();
+  const cancelMutation = useCancelPost();
+  const restoreMutation = useRestorePost();
+  const retryMutation = useRetryPost();
 
   if (!post) {
     return (
@@ -192,11 +143,13 @@ export function PostDetailDrawer({
   const isPublishing = publishMutation.isPending;
   const isCanceling = cancelMutation.isPending;
   const isRestoring = restoreMutation.isPending;
+  const isRetrying = retryMutation.isPending;
 
   const isBusy = isPublishing || isCanceling || isRestoring || isRetrying;
 
-  const canPublish = post.status === "DRAFT" || post.status === "SCHEDULED";
-  const canCancel = post.status === "DRAFT" || post.status === "SCHEDULED";
+  // Alineado con PostActions
+  const canPublish = post.status === "DRAFT";
+  const canCancel = post.status === "SCHEDULED";
   const canRestore = post.status === "CANCELED";
   const canEdit =
     post.status === "DRAFT" ||
@@ -211,6 +164,44 @@ export function PostDetailDrawer({
 
   const canRegenerateText =
     post.status === "FAILED" && diagnosis?.type === "CONTENT_INVALID";
+
+  const handlePublish = async () => {
+    try {
+      await publishMutation.mutateAsync(post.id);
+      message.success("Publicación realizada correctamente");
+    } catch (error) {
+      message.error(getErrorMessage(error, "No se pudo publicar el post"));
+    }
+  };
+
+  const handleCancel = async () => {
+    try {
+      await cancelMutation.mutateAsync(post.id);
+      message.success("Post cancelado correctamente");
+    } catch (error) {
+      message.error(getErrorMessage(error, "No se pudo cancelar el post"));
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await restoreMutation.mutateAsync(post.id);
+      message.success("Post restaurado correctamente");
+    } catch (error) {
+      message.error(getErrorMessage(error, "No se pudo restaurar el post"));
+    }
+  };
+
+  const handleRetry = async () => {
+    try {
+      await retryMutation.mutateAsync(post.id);
+      message.success("Publicación reintentada correctamente");
+    } catch (error) {
+      message.error(
+        getErrorMessage(error, "No se pudo reintentar la publicación")
+      );
+    }
+  };
 
   return (
     <Drawer
@@ -241,7 +232,7 @@ export function PostDetailDrawer({
 
           {canRestore && (
             <Button
-              onClick={() => restoreMutation.mutate(post.id)}
+              onClick={handleRestore}
               loading={isRestoring}
               disabled={isBusy}
             >
@@ -252,7 +243,7 @@ export function PostDetailDrawer({
           {canCancel && (
             <Button
               danger
-              onClick={() => cancelMutation.mutate(post.id)}
+              onClick={handleCancel}
               loading={isCanceling}
               disabled={isBusy}
             >
@@ -262,7 +253,7 @@ export function PostDetailDrawer({
 
           {canRetry && (
             <Button
-              onClick={() => retryPost(post.id)}
+              onClick={handleRetry}
               loading={isRetrying}
               disabled={isBusy}
             >
@@ -273,7 +264,7 @@ export function PostDetailDrawer({
           {canPublish && (
             <Button
               type="primary"
-              onClick={() => publishMutation.mutate(post.id)}
+              onClick={handlePublish}
               loading={isPublishing}
               disabled={isBusy}
             >
@@ -315,19 +306,21 @@ export function PostDetailDrawer({
           </Descriptions.Item>
 
           <Descriptions.Item label="Programado para">
-            {post.scheduledAt || "No programado"}
+            {post.scheduledAt ? formatDateTime(post.scheduledAt) : "No programado"}
           </Descriptions.Item>
 
           <Descriptions.Item label="Publicado en">
-            {post.publishedAt || "Aún no publicado"}
+            {post.publishedAt
+              ? formatDateTime(post.publishedAt)
+              : "Aún no publicado"}
           </Descriptions.Item>
 
           <Descriptions.Item label="Creado en">
-            {post.createdAt}
+            {formatDateTime(post.createdAt)}
           </Descriptions.Item>
 
           <Descriptions.Item label="Actualizado en">
-            {post.updatedAt}
+            {formatDateTime(post.updatedAt)}
           </Descriptions.Item>
         </Descriptions>
 
@@ -358,30 +351,19 @@ export function PostDetailDrawer({
               size="small"
               style={{ width: "100%", marginTop: 12 }}
             >
-              {post.targets.map((target) => {
-                const alertType =
-                  target.status === "SUCCESS"
-                    ? "success"
-                    : target.status === "FAILED"
-                    ? "error"
-                    : target.status === "PENDING"
-                    ? "info"
-                    : "warning";
-
-                return (
-                  <Alert
-                    key={`${target.socialPageId}-${target.pageName}`}
-                    type={alertType}
-                    showIcon
-                    message={`${target.pageName} · ${target.status}`}
-                    description={
-                      target.errorMessage
-                        ? `Error: ${target.errorMessage}`
-                        : "Sin errores"
-                    }
-                  />
-                );
-              })}
+              {post.targets.map((target) => (
+                <Alert
+                  key={`${target.socialPageId}-${target.pageName}`}
+                  type={getTargetAlertType(target.status)}
+                  showIcon
+                  message={`${target.pageName} · ${target.status}`}
+                  description={
+                    target.errorMessage
+                      ? `Error: ${target.errorMessage}`
+                      : "Sin errores"
+                  }
+                />
+              ))}
             </Space>
           </div>
         )}

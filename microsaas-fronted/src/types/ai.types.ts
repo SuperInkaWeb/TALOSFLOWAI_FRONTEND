@@ -1,3 +1,5 @@
+import type { PostStatus } from "./post.types";
+
 export type AiTone =
   | "PROFESIONAL"
   | "EMOCIONAL"
@@ -46,8 +48,8 @@ export type QualityScore = Record<
 
 export type GenerateFullPostRequest = {
   idea: string;
-  tone: AiTone | string;
-  platform: AiPlatform | string;
+  tone: AiTone;
+  platform: AiPlatform;
   targetPageIds: number[];
   creativeOptions: CreativeOptions;
   scheduledAt?: string | null;
@@ -58,7 +60,7 @@ export type GenerateFullPostResponse = {
   postId: number;
   text: string;
   imageUrl?: string | null;
-  status: string;
+  status: PostStatus;
   scheduledAt?: string | null;
   copyBlocks?: CopyBlocks | null;
   qualityScore?: QualityScore | null;
@@ -68,8 +70,8 @@ export type GenerateFullPostResponse = {
 
 export type RegeneratePostRequest = {
   idea: string;
-  tone: AiTone | string;
-  platform: AiPlatform | string;
+  tone: AiTone;
+  platform: AiPlatform;
 };
 
 export const AI_TEMPLATE_OPTIONS: Array<{

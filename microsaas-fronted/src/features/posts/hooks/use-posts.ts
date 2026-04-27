@@ -14,5 +14,6 @@ export function usePosts(params: UsePostsParams = {}) {
   return useQuery({
     queryKey: ["posts", { page, size, status }],
     queryFn: () => postService.getPosts({ page, size, status }),
+    placeholderData: (previousData) => previousData,
   });
 }

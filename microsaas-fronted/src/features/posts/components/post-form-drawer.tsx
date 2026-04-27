@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import {
+  Alert,
   Button,
   DatePicker,
   Drawer,
@@ -7,12 +8,13 @@ import {
   Input,
   Select,
   Space,
-  message,
   Typography,
+  message,
 } from "antd";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useCreatePost } from "../hooks/use-create-post";
 import { useUpdatePost } from "../hooks/use-update-post";
+import { usePlanAccess } from "../../billing/hooks/use-plan-access";
 import { PostImageUpload } from "../components/post-image-upload";
 import type { PostItem } from "../../../types/post.types";
 
@@ -37,10 +39,10 @@ type FormValues = {
   content: string;
   mediaUrl?: string | null;
   targetPageIds: number[];
-  scheduledAt?: dayjs.Dayjs | null;
+  scheduledAt?: Dayjs | null;
 };
 
-function formatLocalDateTime(value?: dayjs.Dayjs | null) {
+function formatLocalDateTime(value?: Dayjs | null) {
   if (!value) return null;
   return value.format("YYYY-MM-DDTHH:mm:ss");
 }
@@ -77,6 +79,7 @@ export function PostFormDrawer({
 
   const createMutation = useCreatePost();
   const updateMutation = useUpdatePost();
+  const { canSchedule, canUseMultiPage } = usePlanAccess();
 
   const isEditMode = mode === "edit" && !!post;
   const isLoading = createMutation.isPending || updateMutation.isPending;
@@ -102,6 +105,18 @@ export function PostFormDrawer({
 
   const handleSubmit = async (values: FormValues) => {
     try {
+      if (values.scheduledAt && !canSchedule) {
+        message.warning("Tu plan actual no permite programar publicaciones.");
+        return;
+      }
+
+      if (values.targetPageIds.length > 1 && !canUseMultiPage) {
+        message.warning(
+          "Tu plan actual no permite seleccionar varias páginas."
+        );
+        return;
+      }
+
       const normalizedMediaUrl =
         typeof values.mediaUrl === "string" ? values.mediaUrl.trim() : "";
 
@@ -109,9 +124,7 @@ export function PostFormDrawer({
         content: values.content.trim(),
         mediaUrl: normalizedMediaUrl.length > 0 ? normalizedMediaUrl : null,
         targetPageIds: values.targetPageIds,
-        scheduledAt: values.scheduledAt
-          ? formatLocalDateTime(values.scheduledAt)
-          : null,
+        scheduledAt: formatLocalDateTime(values.scheduledAt),
       };
 
       if (isEditMode && post) {
@@ -131,8 +144,8 @@ export function PostFormDrawer({
       form.resetFields();
       onClose();
     } catch (error) {
-      message.error(getErrorMessage(error));
       console.error(error);
+      message.error(getErrorMessage(error));
     }
   };
 
@@ -152,6 +165,24 @@ export function PostFormDrawer({
         layout="vertical"
         onFinish={handleSubmit}
       >
+        {!canUseMultiPage && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="Tu plan actual permite una sola página por post."
+          />
+        )}
+
+        {!canSchedule && (
+          <Alert
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+            message="La programación de publicaciones no está disponible en tu plan actual."
+          />
+        )}
+
         <Form.Item
           label="Contenido"
           name="content"
@@ -186,17 +217,33 @@ export function PostFormDrawer({
               min: 1,
               message: "Selecciona al menos una página",
             },
+            {
+              validator: async (_, value: number[] | undefined) => {
+                const selected = value ?? [];
+                if (selected.length <= 1) return;
+                if (!canUseMultiPage) {
+                  throw new Error(
+                    "Tu plan actual no permite seleccionar varias páginas."
+                  );
+                }
+              },
+            },
           ]}
           extra={
             pages.length === 0 ? (
               <Text type="secondary">
                 No hay páginas disponibles. Verifica que tengas páginas conectadas.
               </Text>
+            ) : !canUseMultiPage ? (
+              <Text type="secondary">
+                Tu plan actual permite seleccionar solo una página.
+              </Text>
             ) : undefined
           }
         >
           <Select
             mode="multiple"
+            maxCount={canUseMultiPage ? undefined : 1}
             placeholder="Selecciona una o más páginas"
             options={sortedPages.map((page) => ({
               label: page.name,
@@ -211,7 +258,11 @@ export function PostFormDrawer({
         <Form.Item
           label="Programar publicación (opcional)"
           name="scheduledAt"
-          extra="Si lo dejas vacío, el post se guarda como borrador. Si tiene fecha, se guarda como programado."
+          extra={
+            canSchedule
+              ? "Si lo dejas vacío, el post se guarda como borrador. Si tiene fecha, se guarda como programado."
+              : "Tu plan actual no permite programación."
+          }
         >
           <DatePicker
             showTime
@@ -219,6 +270,10 @@ export function PostFormDrawer({
             style={{ width: "100%" }}
             placeholder="Selecciona fecha y hora"
             allowClear
+            disabled={!canSchedule}
+            disabledDate={(current) =>
+              current ? current.isBefore(dayjs().startOf("day")) : false
+            }
           />
         </Form.Item>
 
