@@ -77,6 +77,14 @@ export function AppLayout() {
 
   const { data: currentUser } = useCurrentUser(userId);
 
+  const [cachedUser, setCachedUser] = useState<typeof currentUser | null>(null);
+
+  useEffect(() => {
+    if (currentUser?.name || currentUser?.email) {
+      setCachedUser(currentUser);
+    }
+  }, [currentUser]);
+
   const { mode, toggleTheme } = useThemeStore();
   const isDark = mode === "dark";
 
@@ -160,11 +168,19 @@ export function AppLayout() {
   const displayRole = roleMap[role || "USER"] || "Usuario";
   const roleColor = roleColorMap[role || "USER"] || "default";
 
-  const displayName = currentUser?.name?.trim() || "Mi cuenta";
-  const displayEmail = currentUser?.email?.trim() || "Sesión activa";
+  const displayName =
+    currentUser?.name?.trim() ||
+    cachedUser?.name?.trim() ||
+    "Mi cuenta";
+
+  const displayEmail =
+    currentUser?.email?.trim() ||
+    cachedUser?.email?.trim() ||
+    "Sesión activa";
+
   const avatarInitial =
-    currentUser?.name?.trim()?.charAt(0)?.toUpperCase() ||
-    currentUser?.email?.trim()?.charAt(0)?.toUpperCase() ||
+    (currentUser?.name || cachedUser?.name)?.trim()?.charAt(0)?.toUpperCase() ||
+    (currentUser?.email || cachedUser?.email)?.trim()?.charAt(0)?.toUpperCase() ||
     "U";
 
   const userMenuItems: MenuProps["items"] = [

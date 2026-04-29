@@ -5,6 +5,8 @@ export function useCurrentUser(userId?: number) {
   return useQuery({
     queryKey: ["current-user", userId],
     queryFn: () => userService.getUserById(userId as number),
-    enabled: !!userId,
+    enabled: Number.isFinite(userId),
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
 }
