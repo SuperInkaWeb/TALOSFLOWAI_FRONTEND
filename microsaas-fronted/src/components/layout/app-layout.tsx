@@ -77,13 +77,25 @@ export function AppLayout() {
 
   const { data: currentUser } = useCurrentUser(userId);
 
-  const [cachedUser, setCachedUser] = useState<typeof currentUser | null>(null);
+ const [cachedUser, setCachedUser] = useState<typeof currentUser | null>(() => {
+  const saved = localStorage.getItem("current_user");
 
-  useEffect(() => {
-    if (currentUser?.name || currentUser?.email) {
-      setCachedUser(currentUser);
-    }
-  }, [currentUser]);
+  if (!saved) return null;
+
+  try {
+    return JSON.parse(saved);
+  } catch {
+    localStorage.removeItem("current_user");
+    return null;
+  }
+});
+
+useEffect(() => {
+  if (currentUser?.name || currentUser?.email) {
+    setCachedUser(currentUser);
+    localStorage.setItem("current_user", JSON.stringify(currentUser));
+  }
+}, [currentUser]);
 
   const { mode, toggleTheme } = useThemeStore();
   const isDark = mode === "dark";
@@ -211,9 +223,10 @@ export function AppLayout() {
       label: "Cerrar sesión",
       danger: true,
       onClick: () => {
-        logout();
-        navigate("/auth/login");
-      },
+      localStorage.removeItem("current_user");
+      logout();
+      navigate("/auth/login");
+    },
     },
   ];
 
