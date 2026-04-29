@@ -7,7 +7,6 @@ import { DashboardPage } from "../../pages/dashboard-page";
 import { BrandingPage } from "../../pages/branding-page";
 import { SocialAccountsPage } from "../../pages/social-accounts-page";
 import { PostsPage } from "../../pages/posts-page";
-import { AiPage } from "../../pages/ai-page";
 import { BillingPage } from "../../pages/billing-page";
 import { PlatformRoute } from "./platform-route";
 import { PlatformLayout } from "../../components/layout/platform-layout";
@@ -97,10 +96,6 @@ export const router = createBrowserRouter([
       {
         path: "posts",
         element: <PostsPage />,
-      },
-      {
-        path: "ai",
-        element: <AiPage />,
       },
       {
         path: "billing",

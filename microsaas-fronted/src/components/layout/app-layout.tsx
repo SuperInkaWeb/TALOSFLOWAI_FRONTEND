@@ -17,7 +17,6 @@ import {
   BgColorsOutlined,
   FileTextOutlined,
   LinkOutlined,
-  RobotOutlined,
   CreditCardOutlined,
   UserOutlined,
   LogoutOutlined,
@@ -144,12 +143,7 @@ useEffect(() => {
         label: "Posts",
         title: "Posts",
       },
-      {
-        key: "/app/ai",
-        icon: <RobotOutlined />,
-        label: "AI Studio",
-        title: "AI Studio",
-      },
+  
       {
         key: "/app/billing",
         icon: <CreditCardOutlined />,
