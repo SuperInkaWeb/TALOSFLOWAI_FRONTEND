@@ -26,6 +26,7 @@ import {
   ClockCircleOutlined,
   WhatsAppOutlined,
 } from "@ant-design/icons";
+import { useThemeStore } from "../app/store/theme.store";
 import { useReferralSummary } from "../features/referrals/hooks/use-referral-summary";
 import { useReferralList } from "../features/referrals/hooks/use-referral-list";
 import ReferralHistoryTable from "../features/referrals/components/referral-history-table";
@@ -38,18 +39,51 @@ export default function ReferralsPage() {
   const [messageApi, contextHolder] = message.useMessage();
   const [shareModalOpen, setShareModalOpen] = useState(false);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-    isFetching,
-  } = useReferralSummary();
+  const { mode } = useThemeStore();
+  const isDark = mode === "dark";
 
-  const {
-    data: referralList = [],
-    isLoading: isReferralListLoading,
-  } = useReferralList();
+  const cardStyle: React.CSSProperties = {
+    background: isDark ? "#0f172a" : "#ffffff",
+    border: isDark
+      ? "1px solid rgba(148,163,184,0.12)"
+      : "1px solid #f0f0f0",
+  };
+
+  const softCardStyle: React.CSSProperties = {
+    background: isDark ? "#020617" : "#fafafa",
+    border: isDark
+      ? "1px solid rgba(148,163,184,0.12)"
+      : "1px solid #f0f0f0",
+  };
+
+  const heroStyle: React.CSSProperties = {
+    background: isDark
+      ? "linear-gradient(135deg, #0f172a, #020617)"
+      : "#f6f9ff",
+    border: isDark
+      ? "1px solid rgba(148,163,184,0.12)"
+      : "1px solid #dbeafe",
+  };
+
+  const secondaryTextStyle: React.CSSProperties = {
+    color: isDark ? "#94a3b8" : "#64748b",
+  };
+
+  const strongTextStyle: React.CSSProperties = {
+    color: isDark ? "#e2e8f0" : "#0f172a",
+  };
+
+  const secondaryButtonStyle: React.CSSProperties = {
+    background: isDark ? "#1e293b" : "#ffffff",
+    borderColor: isDark ? "#334155" : "#d9d9d9",
+    color: isDark ? "#e2e8f0" : "#0f172a",
+  };
+
+  const { data, isLoading, isError, refetch, isFetching } =
+    useReferralSummary();
+
+  const { data: referralList = [], isLoading: isReferralListLoading } =
+    useReferralList();
 
   const handleCopy = async (value: string, label: string) => {
     try {
@@ -111,14 +145,16 @@ export default function ReferralsPage() {
     return (
       <>
         {contextHolder}
-        <Card>
+        <Card style={cardStyle}>
           <Space direction="vertical">
-            <Title level={4} style={{ margin: 0 }}>
+            <Title level={4} style={{ margin: 0, ...strongTextStyle }}>
               No se pudo cargar el resumen de referidos
             </Title>
-            <Paragraph type="secondary" style={{ margin: 0 }}>
+
+            <Paragraph style={{ margin: 0, ...secondaryTextStyle }}>
               Intenta nuevamente para obtener tu enlace y tus métricas.
             </Paragraph>
+
             <Button type="primary" onClick={() => refetch()} loading={isFetching}>
               Reintentar
             </Button>
@@ -140,27 +176,40 @@ export default function ReferralsPage() {
         centered
       >
         <Space direction="vertical" size={16} style={{ width: "100%" }}>
-          <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+          <Paragraph style={{ marginBottom: 0, ...secondaryTextStyle }}>
             Comparte tu enlace y gana recompensas cuando una organización se
             registre y use la plataforma.
           </Paragraph>
 
-          <Card size="small" style={{ background: "#fafafa" }}>
+          <Card size="small" style={softCardStyle}>
             <Space direction="vertical" size={10} style={{ width: "100%" }}>
-              <Text strong>Código</Text>
+              <Text strong style={strongTextStyle}>
+                Código
+              </Text>
+
               <Text code style={{ fontSize: 15 }}>
                 {data.referralCode}
               </Text>
 
               <Divider style={{ margin: "4px 0" }} />
 
-              <Text strong>Link</Text>
-              <Text style={{ wordBreak: "break-all" }}>{data.referralLink}</Text>
+              <Text strong style={strongTextStyle}>
+                Link
+              </Text>
+
+              <Text style={{ wordBreak: "break-all", ...strongTextStyle }}>
+                {data.referralLink}
+              </Text>
 
               <Divider style={{ margin: "4px 0" }} />
 
-              <Text strong>Mensaje sugerido</Text>
-              <Text style={{ whiteSpace: "pre-wrap" }}>{referralInviteMessage}</Text>
+              <Text strong style={strongTextStyle}>
+                Mensaje sugerido
+              </Text>
+
+              <Text style={{ whiteSpace: "pre-wrap", ...strongTextStyle }}>
+                {referralInviteMessage}
+              </Text>
             </Space>
           </Card>
 
@@ -177,6 +226,7 @@ export default function ReferralsPage() {
             <Button
               icon={<MessageOutlined />}
               block
+              style={secondaryButtonStyle}
               onClick={handleCopyInviteMessage}
             >
               Copiar mensaje listo
@@ -185,6 +235,7 @@ export default function ReferralsPage() {
             <Button
               icon={<CopyOutlined />}
               block
+              style={secondaryButtonStyle}
               onClick={() => handleCopy(data.referralCode, "Código")}
             >
               Copiar código
@@ -193,6 +244,7 @@ export default function ReferralsPage() {
             <Button
               icon={<WhatsAppOutlined />}
               block
+              style={secondaryButtonStyle}
               onClick={handleShareWhatsapp}
             >
               Compartir por WhatsApp
@@ -202,44 +254,45 @@ export default function ReferralsPage() {
       </Modal>
 
       <Space direction="vertical" size={20} style={{ width: "100%" }}>
-        <Card variant="borderless" styles={{ body: { padding: 24 } }}>
+        <Card
+          variant="borderless"
+          styles={{ body: { padding: 24 } }}
+          style={cardStyle}
+        >
           <Space direction="vertical" size={8} style={{ width: "100%" }}>
             <Space align="center">
-              <ShareAltOutlined />
-              <Title level={3} style={{ margin: 0 }}>
+              <ShareAltOutlined style={strongTextStyle} />
+
+              <Title level={3} style={{ margin: 0, ...strongTextStyle }}>
                 Programa de referidos
               </Title>
             </Space>
 
-            <Paragraph type="secondary" style={{ marginBottom: 0 }}>
+            <Paragraph style={{ marginBottom: 0, ...secondaryTextStyle }}>
               Invita a otras organizaciones y gana bonus de IA e imágenes cuando
               usen el producto.
             </Paragraph>
           </Space>
         </Card>
 
-        <Card
-          style={{
-            background: "#f6f9ff",
-            border: "1px solid #dbeafe",
-          }}
-        >
+        <Card style={heroStyle}>
           <Row gutter={[16, 16]} align="middle">
             <Col xs={24} lg={16}>
               <Space direction="vertical" size={8}>
-                <Text strong style={{ fontSize: 16 }}>
+                <Text strong style={{ fontSize: 16, ...strongTextStyle }}>
                   Gana recompensas por cada referido
                 </Text>
 
-                <Text type="secondary">
-                  Comparte tu enlace. Cuando una organización se registre y use la
-                  plataforma, recibirás recompensas automáticas.
+                <Text style={secondaryTextStyle}>
+                  Comparte tu enlace. Cuando una organización se registre y use
+                  la plataforma, recibirás recompensas automáticas.
                 </Text>
 
                 <Space wrap>
                   <Tag color="blue" style={{ padding: "4px 10px" }}>
                     +30 IA
                   </Tag>
+
                   <Tag color="purple" style={{ padding: "4px 10px" }}>
                     +30 imágenes
                   </Tag>
@@ -262,7 +315,7 @@ export default function ReferralsPage() {
                   Invitar ahora
                 </Button>
 
-                <Text type="secondary">
+                <Text style={secondaryTextStyle}>
                   Usa tu enlace y compártelo en WhatsApp, email o redes.
                 </Text>
               </Space>
@@ -272,12 +325,14 @@ export default function ReferralsPage() {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} lg={14}>
-            <Card title="Tu enlace de referido">
+            <Card title="Tu enlace de referido" style={cardStyle}>
               <Space direction="vertical" size={16} style={{ width: "100%" }}>
                 <div>
-                  <Text strong>Código</Text>
+                  <Text strong style={strongTextStyle}>
+                    Código
+                  </Text>
 
-                  <Card size="small" style={{ marginTop: 8, background: "#fafafa" }}>
+                  <Card size="small" style={{ marginTop: 8, ...softCardStyle }}>
                     <Space
                       style={{
                         width: "100%",
@@ -290,6 +345,7 @@ export default function ReferralsPage() {
 
                       <Button
                         icon={<CopyOutlined />}
+                        style={secondaryButtonStyle}
                         onClick={() => handleCopy(data.referralCode, "Código")}
                       >
                         Copiar código
@@ -299,11 +355,13 @@ export default function ReferralsPage() {
                 </div>
 
                 <div>
-                  <Text strong>Link</Text>
+                  <Text strong style={strongTextStyle}>
+                    Link
+                  </Text>
 
-                  <Card size="small" style={{ marginTop: 8, background: "#fafafa" }}>
+                  <Card size="small" style={{ marginTop: 8, ...softCardStyle }}>
                     <Space direction="vertical" size={12} style={{ width: "100%" }}>
-                      <Text style={{ wordBreak: "break-all" }}>
+                      <Text style={{ wordBreak: "break-all", ...strongTextStyle }}>
                         {cleanReferralLink}
                       </Text>
 
@@ -318,6 +376,7 @@ export default function ReferralsPage() {
 
                         <Button
                           icon={<MessageOutlined />}
+                          style={secondaryButtonStyle}
                           onClick={handleCopyInviteMessage}
                         >
                           Copiar mensaje
@@ -325,6 +384,7 @@ export default function ReferralsPage() {
 
                         <Button
                           icon={<ShareAltOutlined />}
+                          style={secondaryButtonStyle}
                           onClick={handleShareWhatsapp}
                         >
                           Compartir por WhatsApp
@@ -337,9 +397,11 @@ export default function ReferralsPage() {
                 <Divider style={{ margin: "8px 0" }} />
 
                 <Space direction="vertical" size={8}>
-                  <Text strong>¿Cómo ganar recompensas?</Text>
+                  <Text strong style={strongTextStyle}>
+                    ¿Cómo ganar recompensas?
+                  </Text>
 
-                  <Text type="secondary">
+                  <Text style={secondaryTextStyle}>
                     1. Comparte tu enlace
                     <br />
                     2. Una nueva organización se registra
@@ -354,7 +416,7 @@ export default function ReferralsPage() {
           </Col>
 
           <Col xs={24} lg={10}>
-            <Card title="Bonus actuales">
+            <Card title="Bonus actuales" style={cardStyle}>
               <Row gutter={[16, 16]}>
                 <Col span={12}>
                   <Statistic
@@ -376,7 +438,9 @@ export default function ReferralsPage() {
               <Divider />
 
               <Space direction="vertical" size={10} style={{ width: "100%" }}>
-                <Text strong>Estado</Text>
+                <Text strong style={strongTextStyle}>
+                  Estado
+                </Text>
 
                 {hasBonuses ? (
                   <Space wrap>
@@ -384,7 +448,7 @@ export default function ReferralsPage() {
                     <Tag color="purple">Imágenes: {data.bonusImages}</Tag>
                   </Space>
                 ) : (
-                  <Text type="secondary">
+                  <Text style={secondaryTextStyle}>
                     Aún no tienes recompensas. Invita a tu primera organización 🚀
                   </Text>
                 )}
@@ -392,7 +456,9 @@ export default function ReferralsPage() {
                 <Divider style={{ margin: "6px 0" }} />
 
                 <Space direction="vertical" size={6} style={{ width: "100%" }}>
-                  <Text strong>Progreso mensual</Text>
+                  <Text strong style={strongTextStyle}>
+                    Progreso mensual
+                  </Text>
 
                   <Progress
                     percent={rewardedThisMonthPercent}
@@ -400,8 +466,9 @@ export default function ReferralsPage() {
                     strokeColor="#6366f1"
                   />
 
-                  <Text type="secondary">
-                    {data.rewardedThisMonth}/{MAX_REWARDED_REFERRALS_PER_MONTH} referidos premiados este mes
+                  <Text style={secondaryTextStyle}>
+                    {data.rewardedThisMonth}/{MAX_REWARDED_REFERRALS_PER_MONTH}{" "}
+                    referidos premiados este mes
                   </Text>
                 </Space>
               </Space>
@@ -411,7 +478,7 @@ export default function ReferralsPage() {
 
         <Row gutter={[16, 16]}>
           <Col xs={24} md={12} xl={6}>
-            <Card hoverable>
+            <Card hoverable style={cardStyle}>
               <Statistic
                 title="Total referidos"
                 value={data.totalReferrals}
@@ -421,7 +488,7 @@ export default function ReferralsPage() {
           </Col>
 
           <Col xs={24} md={12} xl={6}>
-            <Card hoverable>
+            <Card hoverable style={cardStyle}>
               <Statistic
                 title="Pendientes"
                 value={data.pendingReferrals}
@@ -431,7 +498,7 @@ export default function ReferralsPage() {
           </Col>
 
           <Col xs={24} md={12} xl={6}>
-            <Card hoverable>
+            <Card hoverable style={cardStyle}>
               <Statistic
                 title="Premiados"
                 value={data.rewardedReferrals}
@@ -441,7 +508,7 @@ export default function ReferralsPage() {
           </Col>
 
           <Col xs={24} md={12} xl={6}>
-            <Card hoverable>
+            <Card hoverable style={cardStyle}>
               <Statistic
                 title="Premiados este mes"
                 value={data.rewardedThisMonth}
@@ -451,7 +518,7 @@ export default function ReferralsPage() {
           </Col>
         </Row>
 
-        <Card title="Historial de referidos">
+        <Card title="Historial de referidos" style={cardStyle}>
           <ReferralHistoryTable
             data={referralList}
             loading={isReferralListLoading}
