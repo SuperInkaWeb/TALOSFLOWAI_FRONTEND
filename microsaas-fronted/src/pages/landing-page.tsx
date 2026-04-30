@@ -1594,10 +1594,34 @@ export function LandingPage() {
               </Text>
             </Col>
             <Col>
-              <Space size="large">
-                <Text style={{ color: "#91a3bf" }}>Términos</Text>
-                <Text style={{ color: "#91a3bf" }}>Privacidad</Text>
-                <Text style={{ color: "#91a3bf" }}>Soporte</Text>
+              <Space size="large" wrap>
+                <a
+                  href="/terms-of-service"
+                  style={{ color: "#91a3bf", textDecoration: "none" }}
+                >
+                  Términos
+                </a>
+
+                <a
+                  href="/privacy-policy"
+                  style={{ color: "#91a3bf", textDecoration: "none" }}
+                >
+                  Privacidad
+                </a>
+
+                <a
+                  href="/data-deletion"
+                  style={{ color: "#91a3bf", textDecoration: "none" }}
+                >
+                  Eliminación de datos
+                </a>
+
+                <a
+                  href="mailto:contacto@talosflow.ai"
+                  style={{ color: "#91a3bf", textDecoration: "none" }}
+                >
+                  Soporte
+                </a>
               </Space>
             </Col>
           </Row>

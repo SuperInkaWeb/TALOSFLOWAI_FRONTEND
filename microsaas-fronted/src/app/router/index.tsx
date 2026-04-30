@@ -21,11 +21,26 @@ import { ForgotPasswordPage } from "../../pages/forgot-password-page";
 import { ResetPasswordPage } from "../../pages/reset-password-page";
 import { PlatformSecurityPage } from "../../features/platform/pages/platform-security-page";
 import { LandingPage } from "../../pages/landing-page";
+import PrivacyPolicyPage from "../../pages/legal/PrivacyPolicyPage";
+import TermsOfServicePage from "../../pages/legal/TermsOfServicePage";
+import DataDeletionPage from "../../pages/legal/DataDeletionPage";
 
 export const router = createBrowserRouter([
  {
     path: "/",
     element: <LandingPage />,
+  },
+  {
+  path: "/privacy-policy",
+  element: <PrivacyPolicyPage />,
+  },
+  {
+  path: "/terms-of-service",
+  element: <TermsOfServicePage />,
+  },
+  {
+  path: "/data-deletion",
+  element: <DataDeletionPage />,
   },
   {
     path: "/platform/login",
