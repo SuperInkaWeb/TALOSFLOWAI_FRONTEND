@@ -1,6 +1,6 @@
 import { Button, Card, Space, Steps, Typography } from "antd";
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Paragraph} = Typography;
 
 type AppOnboardingProps = {
   open: boolean;
@@ -68,10 +68,6 @@ export function AppOnboarding({
             Ocultar guía
           </Button>
         </Space>
-
-        <Text type="secondary">
-          Esta guía se guarda localmente en tu navegador.
-        </Text>
       </Space>
     </Card>
   );
