@@ -29,7 +29,7 @@ export function AppOnboarding({
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={3} style={{ marginBottom: 8 }}>
-            Bienvenido a Qoribex
+            Bienvenido a TalosFlow AI
           </Title>
           <Paragraph style={{ marginBottom: 0 }}>
             Te recomiendo completar estos pasos para empezar a generar y publicar contenido.
