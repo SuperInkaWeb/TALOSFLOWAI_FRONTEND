@@ -1037,7 +1037,7 @@ export function LandingPage() {
         </section>
 
         <section id="planes" style={sectionBaseStyle}>
-          <div style={{ textAlign: "center", marginBottom: 60 }}>
+          <div style={{ marginBottom: 34 }}>
             <Tag
               style={{
                 marginBottom: 16,
@@ -1048,184 +1048,198 @@ export function LandingPage() {
                 borderColor: "rgba(22,119,255,0.22)",
               }}
             >
-              ACCESS LEVELS
+              PLANES DISPONIBLES
             </Tag>
-            <Title style={{ color: "white", marginBottom: 12 }}>
-              Elige el nivel de potencia que necesita tu operación
+
+            <Title style={{ color: "white", marginBottom: 8 }}>
+              Elige el plan ideal para tu operación
             </Title>
-            <Paragraph
-              style={{
-                color: "#aebbd1",
-                maxWidth: 760,
-                margin: "0 auto",
-                fontSize: 18,
-              }}
-            >
-              Empieza con lo esencial y escala a medida que tu volumen,
-              automatización y clientes crezcan.
+
+            <Paragraph style={{ color: "#aebbd1", fontSize: 16, marginBottom: 0 }}>
+              Los planes se cargan desde backend y el usuario puede elegir cualquiera
+              directamente según sus necesidades.
             </Paragraph>
           </div>
 
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={8}>
-              <Card
-                bordered={false}
-                style={{
-                  ...glassCardStyle,
-                  background: "rgba(8, 14, 30, 0.78)",
-                }}
-              >
-                <Title level={3} style={{ color: "white" }}>
-                  Free
-                </Title>
-                <Title
-                  style={{ color: "white", marginTop: 0, fontSize: 52 }}
-                >
-                  $0
-                </Title>
-                <Text style={{ color: "#b6c2d9" }}>Entrada al sistema</Text>
-                <Divider
-                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
-                />
-                <Space direction="vertical">
-                  <Text style={{ color: "#d7e3f8" }}>
-                    • Publicaciones limitadas
-                  </Text>
-                  <Text style={{ color: "#d7e3f8" }}>• IA base</Text>
-                  <Text style={{ color: "#d7e3f8" }}>• 1 cuenta social</Text>
-                </Space>
-                <Button
-                  block
-                  size="large"
+          <Row gutter={[18, 18]}>
+            {[
+              {
+                name: "FREE",
+                price: "$0,00",
+                period: "/ monthly",
+                badge: "",
+                badgeColor: "",
+                features: [
+                  "10 posts por período",
+                  "5 generaciones IA",
+                  "10 imágenes",
+                  "1 cuenta social",
+                  "1 admin",
+                  "0 editores",
+                ],
+                button: "Seleccionar",
+                highlight: false,
+              },
+              {
+                name: "BASIC",
+                price: "$19,99",
+                period: "/ monthly",
+                badge: "7 días de prueba",
+                badgeColor: "#00e5ff",
+                features: [
+                  "50 posts por período",
+                  "30 generaciones IA",
+                  "50 imágenes",
+                  "2 cuentas sociales",
+                  "1 admin",
+                  "2 editores",
+                  "Programación de publicaciones",
+                  "7 días de prueba",
+                ],
+                button: "Elegir plan",
+                highlight: false,
+              },
+              {
+                name: "PLUS",
+                price: "$49,99",
+                period: "/ monthly",
+                badge: "Popular",
+                badgeColor: "#1677ff",
+                features: [
+                  "300 posts por período",
+                  "200 generaciones IA",
+                  "200 imágenes",
+                  "10 cuentas sociales",
+                  "2 admins",
+                  "5 editores",
+                  "Programación de publicaciones",
+                  "Multicuenta / multipágina",
+                  "IA premium",
+                  "Imágenes premium",
+                  "Flujo de aprobación",
+                  "7 días de prueba",
+                ],
+                button: "Elegir plan",
+                highlight: true,
+              },
+              {
+                name: "PRO",
+                price: "$99,99",
+                period: "/ monthly",
+                badge: "Actual",
+                badgeColor: "#52c41a",
+                features: [
+                  "1000 posts por período",
+                  "1000 generaciones IA",
+                  "1000 imágenes",
+                  "25 cuentas sociales",
+                  "5 admins",
+                  "15 editores",
+                  "Programación de publicaciones",
+                  "Multicuenta / multipágina",
+                  "IA premium",
+                  "Imágenes premium",
+                  "A/B testing",
+                  "Flujo de aprobación",
+                  "7 días de prueba",
+                ],
+                button: "Plan actual",
+                highlight: false,
+                disabled: true,
+              },
+            ].map((plan) => (
+              <Col xs={24} md={12} xl={6} key={plan.name}>
+                <Card
+                  bordered={false}
                   style={{
-                    marginTop: 24,
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.05)",
-                    borderColor: "rgba(255,255,255,0.12)",
+                    height: "100%",
+                    borderRadius: 14,
+                    background: "rgba(18, 18, 18, 0.92)",
+                    border: plan.highlight
+                      ? "1px solid rgba(84, 112, 255, 0.65)"
+                      : "1px solid rgba(255,255,255,0.10)",
                     color: "white",
-                    height: 46,
+                    boxShadow: plan.highlight
+                      ? "0 0 0 1px rgba(84,112,255,0.25), 0 20px 50px rgba(0,0,0,0.35)"
+                      : "0 10px 35px rgba(0,0,0,0.24)",
                   }}
-                  onClick={() => navigate("/auth/signup")}
                 >
-                  Inicializar
-                </Button>
-              </Card>
-            </Col>
+                  <Space direction="vertical" size={14} style={{ width: "100%" }}>
+                    <Space>
+                      <Title level={4} style={{ color: "white", margin: 0 }}>
+                        {plan.name}
+                      </Title>
 
-            <Col xs={24} lg={8}>
-              <Card
-                bordered={false}
-                style={{
-                  ...glassCardStyle,
-                  border: "1px solid rgba(56,189,248,0.36)",
-                  boxShadow:
-                    "0 0 0 1px rgba(56,189,248,0.12), 0 18px 50px rgba(0,0,0,0.26), 0 0 56px rgba(56,189,248,0.10)",
-                  transform: "translateY(-6px)",
-                }}
-              >
-                <Tag
-                  style={{
-                    borderRadius: 999,
-                    marginBottom: 8,
-                    background: "rgba(56,189,248,0.14)",
-                    color: "#7dd3fc",
-                    borderColor: "rgba(56,189,248,0.24)",
-                  }}
-                >
-                  Más popular
-                </Tag>
-                <Title level={3} style={{ color: "white" }}>
-                  Plus
-                </Title>
-                <Title
-                  style={{ color: "white", marginTop: 0, fontSize: 52 }}
-                >
-                  $19
-                </Title>
-                <Text style={{ color: "#b6c2d9" }}>
-                  Más capacidad para crecer
-                </Text>
-                <Divider
-                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
-                />
-                <Space direction="vertical">
-                  <Text style={{ color: "#d7e3f8" }}>
-                    • Más publicaciones
-                  </Text>
-                  <Text style={{ color: "#d7e3f8" }}>
-                    • Más generaciones IA
-                  </Text>
-                  <Text style={{ color: "#d7e3f8" }}>
-                    • Varias cuentas sociales
-                  </Text>
-                </Space>
-                <Button
-                  type="primary"
-                  block
-                  size="large"
-                  style={{
-                    marginTop: 24,
-                    borderRadius: 999,
-                    background: "linear-gradient(90deg, #1677ff, #7c3aed)",
-                    border: "none",
-                    height: 46,
-                    boxShadow: "0 10px 24px rgba(124,58,237,0.24)",
-                  }}
-                  onClick={() => navigate("/auth/signup")}
-                >
-                  Activar Plus
-                </Button>
-              </Card>
-            </Col>
+                      {plan.badge && (
+                        <Tag
+                          style={{
+                            margin: 0,
+                            borderRadius: 6,
+                            color: plan.badgeColor,
+                            background: `${plan.badgeColor}1A`,
+                            borderColor: `${plan.badgeColor}33`,
+                          }}
+                        >
+                          {plan.badge}
+                        </Tag>
+                      )}
+                    </Space>
 
-            <Col xs={24} lg={8}>
-              <Card
-                bordered={false}
-                style={{
-                  ...glassCardStyle,
-                  background: "rgba(8, 14, 30, 0.78)",
-                }}
-              >
-                <Title level={3} style={{ color: "white" }}>
-                  Pro
-                </Title>
-                <Title
-                  style={{ color: "white", marginTop: 0, fontSize: 52 }}
-                >
-                  $49
-                </Title>
-                <Text style={{ color: "#b6c2d9" }}>
-                  Para operaciones de alto volumen
-                </Text>
-                <Divider
-                  style={{ borderColor: "rgba(255,255,255,0.08)" }}
-                />
-                <Space direction="vertical">
-                  <Text style={{ color: "#d7e3f8" }}>• Alto volumen</Text>
-                  <Text style={{ color: "#d7e3f8" }}>
-                    • Más capacidad operativa
-                  </Text>
-                  <Text style={{ color: "#d7e3f8" }}>
-                    • Mejor escalabilidad
-                  </Text>
-                </Space>
-                <Button
-                  block
-                  size="large"
-                  style={{
-                    marginTop: 24,
-                    borderRadius: 999,
-                    background: "rgba(255,255,255,0.05)",
-                    borderColor: "rgba(255,255,255,0.12)",
-                    color: "white",
-                    height: 46,
-                  }}
-                  onClick={() => navigate("/auth/signup")}
-                >
-                  Escalar a Pro
-                </Button>
-              </Card>
-            </Col>
+                    <div>
+                      <Title level={2} style={{ color: "white", margin: 0 }}>
+                        {plan.price}
+                      </Title>
+                      <Text style={{ color: "#aebbd1" }}>{plan.period}</Text>
+                    </div>
+
+                    {plan.name !== "FREE" && plan.badge !== "Popular" && (
+                      <Tag
+                        style={{
+                          width: "fit-content",
+                          borderRadius: 6,
+                          color: "#00e5ff",
+                          background: "rgba(0,229,255,0.12)",
+                          borderColor: "rgba(0,229,255,0.18)",
+                        }}
+                      >
+                        7 días de prueba
+                      </Tag>
+                    )}
+
+                    <Divider style={{ borderColor: "rgba(255,255,255,0.10)" }} />
+
+                    <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                      {plan.features.map((feature) => (
+                        <Text key={feature} style={{ color: "white" }}>
+                          ✓ {feature}
+                        </Text>
+                      ))}
+                    </Space>
+
+                    <Divider style={{ borderColor: "rgba(255,255,255,0.10)" }} />
+
+                    <Button
+                      block
+                      disabled={plan.disabled}
+                      onClick={() => navigate("/auth/signup")}
+                      style={{
+                        height: 40,
+                        borderRadius: 10,
+                        background: plan.disabled
+                          ? "rgba(255,255,255,0.08)"
+                          : "#5b5ce2",
+                        borderColor: plan.disabled
+                          ? "rgba(255,255,255,0.12)"
+                          : "#5b5ce2",
+                        color: plan.disabled ? "#8c8c8c" : "white",
+                      }}
+                    >
+                      {plan.button}
+                    </Button>
+                  </Space>
+                </Card>
+              </Col>
+            ))}
           </Row>
         </section>
 
