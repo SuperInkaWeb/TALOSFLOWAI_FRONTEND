@@ -1,19 +1,31 @@
 import { useCallback, useMemo, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Alert,
   Button,
   Card,
+  Empty,
+  Grid,
+  Popconfirm,
   Select,
   Space,
   Table,
   Tag,
+  Tooltip,
   Typography,
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import {
+  EyeOutlined,
+  EditOutlined,
+  SendOutlined,
+  ReloadOutlined,
+  StopOutlined,
+  RollbackOutlined,
+} from "@ant-design/icons";
 
 import { usePosts } from "../features/posts/hooks/use-posts";
-import { PostActions } from "../features/posts/components/post-actions";
 import {
   PostFormDrawer,
   type PostPageOption,
@@ -22,6 +34,7 @@ import { AiGenerateDrawer } from "../features/posts/components/ai-generate-drawe
 import { AiPreviewCard } from "../features/posts/components/ai-preview-card";
 import { PostDetailDrawer } from "../features/posts/components/post-detail-drawer";
 import { useSocialPages } from "../features/dashboard/hooks/use-social-pages";
+import { postService } from "../services/post.service";
 
 import type {
   PostItem,
@@ -33,7 +46,8 @@ import type {
   RegeneratePostRequest,
 } from "../types/ai.types";
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
+const { useBreakpoint } = Grid;
 
 const STATUS_OPTIONS: { label: string; value: PostStatus }[] = [
   { label: "Borrador", value: "DRAFT" },
@@ -116,7 +130,6 @@ function formatDate(value?: string | null) {
   if (!value) return "-";
 
   const date = new Date(value);
-
   if (Number.isNaN(date.getTime())) return value;
 
   return date.toLocaleString("es-EC");
@@ -184,7 +197,264 @@ function normalizePages(raw: unknown): PostPageOption[] {
   return Array.from(map.values());
 }
 
+function PostActionIcons({
+  post,
+  onDetail,
+  onEdit,
+  onRefresh,
+  compact = false,
+}: {
+  post: PostItem;
+  onDetail: (post: PostItem) => void;
+  onEdit: (post: PostItem) => void;
+  onRefresh: () => Promise<void>;
+  compact?: boolean;
+}) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: async ({
+      action,
+      postId,
+    }: {
+      action: "publish" | "cancel" | "retry" | "restore";
+      postId: number;
+    }) => {
+      if (action === "publish") return postService.publishPost(postId);
+      if (action === "cancel") return postService.cancelPost(postId);
+      if (action === "retry") return postService.retryPost(postId);
+      return postService.restorePost(postId);
+    },
+    onSuccess: async () => {
+      message.success("Acción realizada correctamente.");
+      await queryClient.invalidateQueries({ queryKey: ["posts"] });
+      await onRefresh();
+    },
+    onError: (err) => {
+      message.error(
+        err instanceof Error
+          ? err.message
+          : "No se pudo realizar la acción."
+      );
+    },
+  });
+
+  const canEdit = post.status === "DRAFT" || post.status === "SCHEDULED";
+  const canPublish = post.status === "DRAFT";
+  const canCancel =
+    post.status === "DRAFT" ||
+    post.status === "SCHEDULED" ||
+    post.status === "PROCESSING";
+  const canRetry = post.status === "FAILED";
+  const canRestore = post.status === "CANCELED";
+
+  return (
+    <Space
+      size={compact ? 2 : 4}
+      style={{
+        display: "flex",
+        flexWrap: "nowrap",
+        justifyContent: "flex-end",
+        width: "100%",
+      }}
+    >
+      <Tooltip title="Ver detalle">
+        <Button
+          type="text"
+          shape="circle"
+          size={compact ? "small" : "middle"}
+          icon={<EyeOutlined />}
+          onClick={() => onDetail(post)}
+        />
+      </Tooltip>
+
+      {canEdit && (
+        <Tooltip title="Editar">
+          <Button
+            type="text"
+            shape="circle"
+            size={compact ? "small" : "middle"}
+            icon={<EditOutlined />}
+            onClick={() => onEdit(post)}
+          />
+        </Tooltip>
+      )}
+
+      {canPublish && (
+        <Tooltip title="Publicar">
+          <Popconfirm
+            title="¿Publicar este post?"
+            okText="Sí, publicar"
+            cancelText="No"
+            onConfirm={() =>
+              mutation.mutate({ action: "publish", postId: post.id })
+            }
+          >
+            <Button
+              type="text"
+              shape="circle"
+              size={compact ? "small" : "middle"}
+              loading={mutation.isPending}
+              icon={<SendOutlined />}
+              style={{ color: "#52c41a" }}
+            />
+          </Popconfirm>
+        </Tooltip>
+      )}
+
+      {canRetry && (
+        <Tooltip title="Reintentar">
+          <Button
+            type="text"
+            shape="circle"
+            size={compact ? "small" : "middle"}
+            loading={mutation.isPending}
+            icon={<ReloadOutlined />}
+            style={{ color: "#1677ff" }}
+            onClick={() => mutation.mutate({ action: "retry", postId: post.id })}
+          />
+        </Tooltip>
+      )}
+
+      {canRestore && (
+        <Tooltip title="Restaurar">
+          <Button
+            type="text"
+            shape="circle"
+            size={compact ? "small" : "middle"}
+            loading={mutation.isPending}
+            icon={<RollbackOutlined />}
+            style={{ color: "#1677ff" }}
+            onClick={() =>
+              mutation.mutate({ action: "restore", postId: post.id })
+            }
+          />
+        </Tooltip>
+      )}
+
+      {canCancel && (
+        <Tooltip title="Cancelar">
+          <Popconfirm
+            title="¿Cancelar este post?"
+            okText="Sí, cancelar"
+            cancelText="No"
+            onConfirm={() =>
+              mutation.mutate({ action: "cancel", postId: post.id })
+            }
+          >
+            <Button
+              type="text"
+              shape="circle"
+              size={compact ? "small" : "middle"}
+              loading={mutation.isPending}
+              icon={<StopOutlined />}
+              danger
+            />
+          </Popconfirm>
+        </Tooltip>
+      )}
+    </Space>
+  );
+}
+
+function PostMobileCard({
+  post,
+  onDetail,
+  onEdit,
+  onRefresh,
+}: {
+  post: PostItem;
+  onDetail: (post: PostItem) => void;
+  onEdit: (post: PostItem) => void;
+  onRefresh: () => Promise<void>;
+}) {
+  return (
+    <Card
+      size="small"
+      style={{
+        width: "100%",
+        borderRadius: 14,
+      }}
+      styles={{
+        body: {
+          padding: 14,
+        },
+      }}
+    >
+      <Space direction="vertical" size={10} style={{ width: "100%" }}>
+        <Space
+          style={{
+            width: "100%",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 8,
+          }}
+        >
+          <Text strong>#{post.id}</Text>
+          <Tag color={getStatusColor(post.status)} style={{ marginInlineEnd: 0 }}>
+            {getStatusLabel(post.status)}
+          </Tag>
+        </Space>
+
+        <Paragraph
+          style={{ marginBottom: 0 }}
+          ellipsis={{ rows: 4, expandable: true, symbol: "ver más" }}
+        >
+          {post.content}
+        </Paragraph>
+
+        <Space direction="vertical" size={2} style={{ width: "100%" }}>
+          <Text type="secondary">Programado: {formatDate(post.scheduledAt)}</Text>
+          <Text type="secondary">Publicado: {formatDate(post.publishedAt)}</Text>
+        </Space>
+
+        <div>
+          <Text type="secondary">Páginas objetivo:</Text>
+
+          <div style={{ marginTop: 6 }}>
+            {post.targets?.length ? (
+              <Space wrap size={[4, 6]}>
+                {post.targets.map((target) => (
+                  <Tag
+                    key={`${target.socialPageId}-${target.pageName}`}
+                    color={getTargetStatusColor(target.status)}
+                    style={{ marginInlineEnd: 0 }}
+                  >
+                    {target.pageName} - {getTargetStatusLabel(target.status)}
+                  </Tag>
+                ))}
+              </Space>
+            ) : (
+              <Text type="secondary">Sin páginas</Text>
+            )}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            marginTop: 4,
+          }}
+        >
+          <PostActionIcons
+            post={post}
+            onDetail={onDetail}
+            onEdit={onEdit}
+            onRefresh={onRefresh}
+            compact
+          />
+        </div>
+      </Space>
+    </Card>
+  );
+}
+
 export function PostsPage() {
+  const screens = useBreakpoint();
+  const isMobile = !screens.lg;
+  const isSmallMobile = !screens.sm;
+
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
   const [status, setStatus] = useState<PostStatus | undefined>(undefined);
@@ -208,10 +478,7 @@ export function PostsPage() {
     status,
   });
 
-  const {
-    data: socialPagesRaw,
-    isLoading: isLoadingPages,
-  } = useSocialPages();
+  const { data: socialPagesRaw, isLoading: isLoadingPages } = useSocialPages();
 
   const pageOptions = useMemo(
     () => normalizePages(socialPagesRaw),
@@ -251,10 +518,7 @@ export function PostsPage() {
   }, [refetch]);
 
   const handleGenerated = useCallback(
-    async (
-      result: GenerateFullPostResponse,
-      payload: RegeneratePostRequest
-    ) => {
+    async (result: GenerateFullPostResponse, payload: RegeneratePostRequest) => {
       setGeneratedPost(result);
       setRegeneratePayload(payload);
       await refetch();
@@ -313,33 +577,26 @@ export function PostsPage() {
         title: "ID",
         dataIndex: "id",
         key: "id",
-        width: 90,
+        width: 70,
       },
       {
         title: "Contenido",
         dataIndex: "content",
         key: "content",
-        width: 340,
         render: (value: string) => (
-          <div
-            style={{
-              maxWidth: 340,
-              whiteSpace: "normal",
-              wordBreak: "break-word",
-              lineHeight: 1.6,
-            }}
+          <Paragraph
+            style={{ marginBottom: 0, maxWidth: 460 }}
+            ellipsis={{ rows: 3 }}
           >
-            <Text>
-              {value.length > 180 ? `${value.slice(0, 180)}...` : value}
-            </Text>
-          </div>
+            {value}
+          </Paragraph>
         ),
       },
       {
         title: "Estado",
         dataIndex: "status",
         key: "status",
-        width: 150,
+        width: 140,
         render: (statusValue: PostStatus) => (
           <Tag color={getStatusColor(statusValue)}>
             {getStatusLabel(statusValue)}
@@ -347,61 +604,81 @@ export function PostsPage() {
         ),
       },
       {
-        title: "Programado",
-        dataIndex: "scheduledAt",
-        key: "scheduledAt",
+        title: "Fecha",
+        key: "date",
         width: 190,
-        render: (value?: string | null) => formatDate(value),
+        render: (_, record) => (
+          <Space direction="vertical" size={2}>
+            <Text type="secondary">
+              Programado: {formatDate(record.scheduledAt)}
+            </Text>
+            <Text type="secondary">
+              Publicado: {formatDate(record.publishedAt)}
+            </Text>
+          </Space>
+        ),
       },
       {
-        title: "Publicado",
-        dataIndex: "publishedAt",
-        key: "publishedAt",
-        width: 190,
-        render: (value?: string | null) => formatDate(value),
-      },
-      {
-        title: "Páginas objetivo",
+        title: "Páginas",
         dataIndex: "targets",
         key: "targets",
-        width: 280,
+        width: 240,
         render: (targets: PostTargetItem[]) => (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <Space wrap size={[4, 6]}>
             {targets?.length ? (
               targets.map((target) => (
-                <Space key={`${target.socialPageId}-${target.pageName}`} wrap>
-                  <Text>{target.pageName}</Text>
-                  <Tag color={getTargetStatusColor(target.status)}>
-                    {getTargetStatusLabel(target.status)}
-                  </Tag>
-                </Space>
+                <Tag
+                  key={`${target.socialPageId}-${target.pageName}`}
+                  color={getTargetStatusColor(target.status)}
+                  style={{ marginInlineEnd: 0 }}
+                >
+                  {target.pageName}
+                </Tag>
               ))
             ) : (
               <Text type="secondary">Sin páginas</Text>
             )}
-          </div>
+          </Space>
         ),
       },
       {
         title: "Acciones",
         key: "actions",
-        width: 340,
+        width: 190,
+        align: "right",
         render: (_, record) => (
-          <Space wrap>
-            <Button onClick={() => handleOpenDetail(record)}>
-              Ver detalle
-            </Button>
-            <PostActions post={record} onEdit={handleOpenEdit} />
-          </Space>
+          <PostActionIcons
+            post={record}
+            onDetail={handleOpenDetail}
+            onEdit={handleOpenEdit}
+            onRefresh={handleSaved}
+          />
         ),
       },
     ],
-    [handleOpenDetail, handleOpenEdit]
+    [handleOpenDetail, handleOpenEdit, handleSaved]
   );
 
+  const posts = data?.items ?? [];
+
   return (
-    <Card>
-      <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <Card
+      style={{ width: "100%" }}
+      styles={{
+        body: {
+          padding: isMobile ? 14 : 24,
+        },
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: isMobile ? 18 : 24,
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -411,8 +688,14 @@ export function PostsPage() {
             flexWrap: "wrap",
           }}
         >
-          <div>
-            <Title level={2} style={{ marginBottom: 4 }}>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <Title
+              level={2}
+              style={{
+                marginBottom: 4,
+                fontSize: isMobile ? 24 : 30,
+              }}
+            >
               Publicaciones
             </Title>
             <Text type="secondary">
@@ -421,10 +704,17 @@ export function PostsPage() {
             </Text>
           </div>
 
-          <Space wrap>
+          <Space
+            wrap
+            style={{
+              width: isSmallMobile ? "100%" : undefined,
+              justifyContent: isSmallMobile ? "space-between" : "flex-end",
+            }}
+          >
             <Button
               onClick={() => setAiDrawerOpen(true)}
               disabled={isLoadingPages || pageOptions.length === 0}
+              style={{ flex: isSmallMobile ? 1 : undefined }}
             >
               Generar con IA
             </Button>
@@ -433,6 +723,7 @@ export function PostsPage() {
               type="primary"
               onClick={handleOpenCreate}
               disabled={isLoadingPages || pageOptions.length === 0}
+              style={{ flex: isSmallMobile ? 1 : undefined }}
             >
               Nuevo post
             </Button>
@@ -445,7 +736,7 @@ export function PostsPage() {
           <Select
             allowClear
             placeholder="Todos"
-            style={{ width: 220, marginTop: 8 }}
+            style={{ width: isMobile ? "100%" : 220, marginTop: 8 }}
             value={status}
             onChange={(value) => {
               setPage(0);
@@ -487,23 +778,80 @@ export function PostsPage() {
           />
         )}
 
-        <Table<PostItem>
-          rowKey="id"
-          loading={isLoading}
-          columns={columns}
-          dataSource={data?.items ?? []}
-          pagination={{
-            current: (data?.page ?? page) + 1,
-            pageSize: data?.size ?? size,
-            total: data?.totalItems ?? 0,
-            showSizeChanger: true,
-            onChange: (nextPage, nextSize) => {
-              setPage(nextPage - 1);
-              setSize(nextSize);
-            },
-          }}
-          scroll={{ x: 1400 }}
-        />
+        {isMobile ? (
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            {posts.length > 0 ? (
+              posts.map((post) => (
+                <PostMobileCard
+                  key={post.id}
+                  post={post}
+                  onDetail={handleOpenDetail}
+                  onEdit={handleOpenEdit}
+                  onRefresh={handleSaved}
+                />
+              ))
+            ) : (
+              <Empty description="No hay publicaciones" />
+            )}
+
+            {posts.length > 0 && (
+              <Space
+                wrap
+                style={{
+                  width: "100%",
+                  justifyContent: "space-between",
+                  marginTop: 8,
+                }}
+              >
+                <Button
+                  disabled={page <= 0 || isLoading}
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+                  style={{ flex: isSmallMobile ? 1 : undefined }}
+                >
+                  Anterior
+                </Button>
+
+                <Text
+                  style={{
+                    width: isSmallMobile ? "100%" : undefined,
+                    textAlign: "center",
+                    order: isSmallMobile ? -1 : undefined,
+                  }}
+                >
+                  Página {(data?.page ?? page) + 1} de {data?.totalPages ?? 1}
+                </Text>
+
+                <Button
+                  disabled={
+                    isLoading ||
+                    (data?.totalPages ? page + 1 >= data.totalPages : true)
+                  }
+                  onClick={() => setPage((prev) => prev + 1)}
+                  style={{ flex: isSmallMobile ? 1 : undefined }}
+                >
+                  Siguiente
+                </Button>
+              </Space>
+            )}
+          </Space>
+        ) : (
+          <Table<PostItem>
+            rowKey="id"
+            loading={isLoading}
+            columns={columns}
+            dataSource={posts}
+            pagination={{
+              current: (data?.page ?? page) + 1,
+              pageSize: data?.size ?? size,
+              total: data?.totalItems ?? 0,
+              showSizeChanger: true,
+              onChange: (nextPage, nextSize) => {
+                setPage(nextPage - 1);
+                setSize(nextSize);
+              },
+            }}
+          />
+        )}
 
         <PostFormDrawer
           open={drawerOpen}

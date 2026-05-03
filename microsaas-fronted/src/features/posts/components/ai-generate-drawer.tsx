@@ -5,6 +5,7 @@ import {
   Divider,
   Drawer,
   Form,
+  Grid,
   Input,
   Select,
   Space,
@@ -28,6 +29,7 @@ import type {
 import type { PostPageOption } from "./post-form-drawer";
 
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 type FormValues = {
   idea: string;
@@ -55,10 +57,7 @@ type Props = {
   pages: PostPageOption[];
 };
 
-const TEMPLATE_OPTIONS: Array<{
-  label: string;
-  value: AiTemplateValue;
-}> = [
+const TEMPLATE_OPTIONS: Array<{ label: string; value: AiTemplateValue }> = [
   { label: "Automático premium", value: "PREMIUM_AUTO" },
   { label: "Marca social", value: "SOCIAL_BRAND" },
   { label: "Fuerte", value: "BOLD" },
@@ -66,13 +65,11 @@ const TEMPLATE_OPTIONS: Array<{
   { label: "Mínimo", value: "MINIMAL" },
 ];
 
-const IMAGE_MODE_OPTIONS: Array<{
-  label: string;
-  value: ImageGenerationMode;
-}> = [
-  { label: "Base editable", value: "EDITABLE_BASE" },
-  { label: "Anuncio final IA", value: "FINAL_AD_CREATIVE" },
-];
+const IMAGE_MODE_OPTIONS: Array<{ label: string; value: ImageGenerationMode }> =
+  [
+    { label: "Base editable", value: "EDITABLE_BASE" },
+    { label: "Anuncio final IA", value: "FINAL_AD_CREATIVE" },
+  ];
 
 const TONE_OPTIONS: Array<{ label: string; value: AiTone }> = [
   { label: "Profesional", value: "PROFESIONAL" },
@@ -103,9 +100,7 @@ function getErrorMessage(error: unknown) {
     return data?.message || data?.error || "No se pudo generar el post con IA";
   }
 
-  if (error instanceof Error) {
-    return error.message;
-  }
+  if (error instanceof Error) return error.message;
 
   return "No se pudo generar el post con IA";
 }
@@ -117,6 +112,9 @@ export function AiGenerateDrawer({
   pages,
 }: Props) {
   const [form] = Form.useForm<FormValues>();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+
   const generateMutation = useGeneratePost();
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -189,8 +187,7 @@ export function AiGenerateDrawer({
         showSocialLinks: values.creativeOptions.showSocialLinks,
         template: values.creativeOptions.template ?? "PREMIUM_AUTO",
         imageGenerationMode:
-          values.creativeOptions.imageGenerationMode ??
-          "FINAL_AD_CREATIVE",
+          values.creativeOptions.imageGenerationMode ?? "FINAL_AD_CREATIVE",
       },
     };
 
@@ -219,8 +216,13 @@ export function AiGenerateDrawer({
         title="Generar post con IA"
         open={open}
         onClose={onClose}
-        width={560}
+        width={isMobile ? "100%" : 560}
         destroyOnClose
+        styles={{
+          body: {
+            padding: isMobile ? 16 : 24,
+          },
+        }}
       >
         <Form<FormValues>
           form={form}
@@ -277,8 +279,10 @@ export function AiGenerateDrawer({
             ]}
           >
             <Input.TextArea
-              rows={5}
+              rows={isMobile ? 4 : 5}
               placeholder="Ej: Promocionar hamburguesas 2x1 para MrChucks en Cuenca Ricaurte"
+              maxLength={1200}
+              showCount
             />
           </Form.Item>
 
@@ -287,7 +291,7 @@ export function AiGenerateDrawer({
             name="tone"
             rules={[{ required: true, message: "Selecciona un tono" }]}
           >
-            <Select options={TONE_OPTIONS} />
+            <Select options={TONE_OPTIONS} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
@@ -295,7 +299,7 @@ export function AiGenerateDrawer({
             name="platform"
             rules={[{ required: true, message: "Selecciona una plataforma" }]}
           >
-            <Select options={PLATFORM_OPTIONS} />
+            <Select options={PLATFORM_OPTIONS} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
@@ -336,6 +340,8 @@ export function AiGenerateDrawer({
               }))}
               optionFilterProp="label"
               showSearch
+              style={{ width: "100%" }}
+              maxTagCount="responsive"
             />
           </Form.Item>
 
@@ -386,6 +392,7 @@ export function AiGenerateDrawer({
             }
           >
             <Select
+              style={{ width: "100%" }}
               options={TEMPLATE_OPTIONS.map((option) => ({
                 ...option,
                 disabled:
@@ -425,6 +432,7 @@ export function AiGenerateDrawer({
             }
           >
             <Select
+              style={{ width: "100%" }}
               options={IMAGE_MODE_OPTIONS.map((option) => ({
                 ...option,
                 disabled:

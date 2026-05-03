@@ -5,6 +5,7 @@ import {
   DatePicker,
   Drawer,
   Form,
+  Grid,
   Input,
   Select,
   Space,
@@ -20,6 +21,7 @@ import type { PostItem } from "../../../types/post.types";
 
 const { TextArea } = Input;
 const { Text } = Typography;
+const { useBreakpoint } = Grid;
 
 export type PostPageOption = {
   id: number;
@@ -60,9 +62,7 @@ function getErrorMessage(error: unknown) {
     return data?.message || data?.error || "Ocurrió un error al guardar el post";
   }
 
-  if (error instanceof Error) {
-    return error.message;
-  }
+  if (error instanceof Error) return error.message;
 
   return "Ocurrió un error al guardar el post";
 }
@@ -76,6 +76,8 @@ export function PostFormDrawer({
   post,
 }: Props) {
   const [form] = Form.useForm<FormValues>();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
 
   const createMutation = useCreatePost();
   const updateMutation = useUpdatePost();
@@ -111,9 +113,7 @@ export function PostFormDrawer({
       }
 
       if (values.targetPageIds.length > 1 && !canUseMultiPage) {
-        message.warning(
-          "Tu plan actual no permite seleccionar varias páginas."
-        );
+        message.warning("Tu plan actual no permite seleccionar varias páginas.");
         return;
       }
 
@@ -155,16 +155,17 @@ export function PostFormDrawer({
   return (
     <Drawer
       title={drawerTitle}
-      width={520}
+      width={isMobile ? "100%" : 520}
       open={open}
       onClose={onClose}
       destroyOnClose
+      styles={{
+        body: {
+          padding: isMobile ? 16 : 24,
+        },
+      }}
     >
-      <Form<FormValues>
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
         {!canUseMultiPage && (
           <Alert
             type="info"
@@ -192,7 +193,7 @@ export function PostFormDrawer({
           ]}
         >
           <TextArea
-            rows={6}
+            rows={isMobile ? 5 : 6}
             placeholder="Escribe el contenido del post..."
             maxLength={2000}
             showCount
@@ -232,7 +233,8 @@ export function PostFormDrawer({
           extra={
             pages.length === 0 ? (
               <Text type="secondary">
-                No hay páginas disponibles. Verifica que tengas páginas conectadas.
+                No hay páginas disponibles. Verifica que tengas páginas
+                conectadas.
               </Text>
             ) : !canUseMultiPage ? (
               <Text type="secondary">
@@ -252,6 +254,8 @@ export function PostFormDrawer({
             disabled={pages.length === 0}
             optionFilterProp="label"
             showSearch
+            style={{ width: "100%" }}
+            maxTagCount="responsive"
           />
         </Form.Item>
 
@@ -277,13 +281,24 @@ export function PostFormDrawer({
           />
         </Form.Item>
 
-        <Space size="middle">
-          <Button onClick={onClose}>Cancelar</Button>
+        <Space
+          size="middle"
+          wrap
+          style={{
+            width: "100%",
+            justifyContent: isMobile ? "space-between" : "flex-start",
+          }}
+        >
+          <Button onClick={onClose} style={{ flex: isMobile ? 1 : undefined }}>
+            Cancelar
+          </Button>
+
           <Button
             type="primary"
             htmlType="submit"
             loading={isLoading}
             disabled={pages.length === 0}
+            style={{ flex: isMobile ? 1 : undefined }}
           >
             {submitLabel}
           </Button>

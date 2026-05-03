@@ -76,25 +76,25 @@ export function AppLayout() {
 
   const { data: currentUser } = useCurrentUser(userId);
 
- const [cachedUser, setCachedUser] = useState<typeof currentUser | null>(() => {
-  const saved = localStorage.getItem("current_user");
+  const [cachedUser, setCachedUser] = useState<typeof currentUser | null>(() => {
+    const saved = localStorage.getItem("current_user");
 
-  if (!saved) return null;
+    if (!saved) return null;
 
-  try {
-    return JSON.parse(saved);
-  } catch {
-    localStorage.removeItem("current_user");
-    return null;
-  }
-});
+    try {
+      return JSON.parse(saved);
+    } catch {
+      localStorage.removeItem("current_user");
+      return null;
+    }
+  });
 
-useEffect(() => {
-  if (currentUser?.name || currentUser?.email) {
-    setCachedUser(currentUser);
-    localStorage.setItem("current_user", JSON.stringify(currentUser));
-  }
-}, [currentUser]);
+  useEffect(() => {
+    if (currentUser?.name || currentUser?.email) {
+      setCachedUser(currentUser);
+      localStorage.setItem("current_user", JSON.stringify(currentUser));
+    }
+  }, [currentUser]);
 
   const { mode, toggleTheme } = useThemeStore();
   const isDark = mode === "dark";
@@ -143,7 +143,6 @@ useEffect(() => {
         label: "Posts",
         title: "Posts",
       },
-  
       {
         key: "/app/billing",
         icon: <CreditCardOutlined />,
@@ -175,18 +174,17 @@ useEffect(() => {
   const roleColor = roleColorMap[role || "USER"] || "default";
 
   const displayName =
-    currentUser?.name?.trim() ||
-    cachedUser?.name?.trim() ||
-    "Mi cuenta";
+    currentUser?.name?.trim() || cachedUser?.name?.trim() || "Mi cuenta";
 
   const displayEmail =
-    currentUser?.email?.trim() ||
-    cachedUser?.email?.trim() ||
-    "Sesión activa";
+    currentUser?.email?.trim() || cachedUser?.email?.trim() || "Sesión activa";
 
   const avatarInitial =
     (currentUser?.name || cachedUser?.name)?.trim()?.charAt(0)?.toUpperCase() ||
-    (currentUser?.email || cachedUser?.email)?.trim()?.charAt(0)?.toUpperCase() ||
+    (currentUser?.email || cachedUser?.email)
+      ?.trim()
+      ?.charAt(0)
+      ?.toUpperCase() ||
     "U";
 
   const userMenuItems: MenuProps["items"] = [
@@ -217,10 +215,10 @@ useEffect(() => {
       label: "Cerrar sesión",
       danger: true,
       onClick: () => {
-      localStorage.removeItem("current_user");
-      logout();
-      navigate("/auth/login");
-    },
+        localStorage.removeItem("current_user");
+        logout();
+        navigate("/auth/login");
+      },
     },
   ];
 
@@ -263,7 +261,7 @@ useEffect(() => {
             }}
           />
 
-          {!collapsed && !isMobile && (
+          {(!collapsed || isMobile) && (
             <div
               style={{
                 display: "flex",
@@ -353,6 +351,7 @@ useEffect(() => {
     <Layout
       style={{
         minHeight: "100vh",
+        overflowX: "hidden",
         background: isDark
           ? "linear-gradient(135deg, #020617, #0f172a)"
           : "#f5f7fb",
@@ -360,6 +359,13 @@ useEffect(() => {
     >
       <style>
         {`
+          html,
+          body,
+          #root {
+            max-width: 100%;
+            overflow-x: hidden;
+          }
+
           .premium-sider {
             background: ${
               isDark
@@ -400,7 +406,9 @@ useEffect(() => {
 
           .premium-sider .ant-menu-item:hover {
             background: ${
-              isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(99, 102, 241, 0.08)"
+              isDark
+                ? "rgba(255, 255, 255, 0.08)"
+                : "rgba(99, 102, 241, 0.08)"
             } !important;
             transform: translateX(2px);
             color: ${isDark ? "#ffffff" : "#111827"} !important;
@@ -473,6 +481,34 @@ useEffect(() => {
           .premium-user-dropdown .ant-dropdown-menu-item-danger:hover {
             background: rgba(248,113,113,0.12) !important;
           }
+
+          @media (max-width: 991px) {
+            .ant-layout {
+              overflow-x: hidden !important;
+            }
+
+            .ant-card {
+              max-width: 100% !important;
+            }
+
+            .ant-drawer-content-wrapper {
+              max-width: 100vw !important;
+            }
+
+            .ant-picker-dropdown {
+              max-width: 100vw !important;
+              overflow-x: auto !important;
+            }
+
+            .ant-picker-panel-container {
+              max-width: 100vw !important;
+              overflow-x: auto !important;
+            }
+
+            .premium-mobile-title {
+              max-width: calc(100vw - 150px);
+            }
+          }
         `}
       </style>
 
@@ -503,7 +539,7 @@ useEffect(() => {
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
           closable={false}
-          width={248}
+          width={280}
           className="premium-drawer"
         >
           {sidebarMenu}
@@ -514,31 +550,39 @@ useEffect(() => {
         style={{
           background: "transparent",
           transition: "all 0.28s ease",
+          minWidth: 0,
+          overflowX: "hidden",
         }}
       >
         <Header
           style={{
-            background: isDark ? "rgba(2, 6, 23, 0.82)" : "rgba(255,255,255,0.82)",
+            background: isDark
+              ? "rgba(2, 6, 23, 0.82)"
+              : "rgba(255,255,255,0.82)",
             backdropFilter: "blur(10px)",
             WebkitBackdropFilter: "blur(10px)",
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: isMobile ? "0 16px" : "0 24px",
+            padding: isMobile ? "0 12px" : "0 24px",
             borderBottom: isDark
               ? "1px solid rgba(148, 163, 184, 0.12)"
               : "1px solid rgba(15, 23, 42, 0.08)",
-            height: 76,
+            height: isMobile ? 72 : 76,
             lineHeight: "normal",
+            minWidth: 0,
           }}
         >
-          <Space align="center" size={16}>
+          <Space align="center" size={isMobile ? 10 : 16} style={{ minWidth: 0 }}>
             {isMobile ? (
               <Button
                 type="text"
                 icon={
                   <MenuUnfoldOutlined
-                    style={{ fontSize: 18, color: isDark ? "#ffffff" : "#0f172a" }}
+                    style={{
+                      fontSize: 18,
+                      color: isDark ? "#ffffff" : "#0f172a",
+                    }}
                   />
                 }
                 onClick={() => setMobileOpen(true)}
@@ -548,31 +592,40 @@ useEffect(() => {
                 type="text"
                 icon={
                   <MenuUnfoldOutlined
-                    style={{ fontSize: 18, color: isDark ? "#ffffff" : "#0f172a" }}
+                    style={{
+                      fontSize: 18,
+                      color: isDark ? "#ffffff" : "#0f172a",
+                    }}
                   />
                 }
                 onClick={() => handleCollapsedChange(false)}
               />
             ) : null}
 
-            <Space direction="vertical" size={4}>
+            <Space direction="vertical" size={3} style={{ minWidth: 0 }}>
               <Text
                 strong
+                className="premium-mobile-title"
                 style={{
-                  fontSize: isMobile ? 16 : 18,
+                  fontSize: isMobile ? 14 : 18,
                   color: isDark ? "#ffffff" : "#0f172a",
+                  display: "block",
                 }}
+                ellipsis
               >
                 Panel principal
               </Text>
 
-              <Space align="center" size={10} wrap>
+              <Space align="center" size={8} wrap>
                 <Text
                   strong
                   style={{
-                    fontSize: isMobile ? 14 : 16,
+                    fontSize: isMobile ? 12 : 16,
                     color: isDark ? "#e2e8f0" : "#334155",
+                    maxWidth: isMobile ? 90 : 180,
+                    display: "block",
                   }}
+                  ellipsis
                 >
                   {displayOrganization}
                 </Text>
@@ -581,9 +634,10 @@ useEffect(() => {
                   color={roleColor}
                   style={{
                     marginInlineEnd: 0,
-                    paddingInline: 10,
+                    paddingInline: isMobile ? 8 : 10,
                     borderRadius: 999,
                     fontWeight: 600,
+                    fontSize: isMobile ? 11 : 12,
                   }}
                 >
                   {displayRole}
@@ -592,7 +646,7 @@ useEffect(() => {
             </Space>
           </Space>
 
-          <Space align="center" size={10}>
+          <Space align="center" size={isMobile ? 4 : 10}>
             <Button
               type="text"
               onClick={toggleTheme}
@@ -616,13 +670,13 @@ useEffect(() => {
                 className="premium-account"
                 style={{
                   cursor: "pointer",
-                  padding: isMobile ? "6px 8px" : "8px 12px",
+                  padding: isMobile ? "4px 4px" : "8px 12px",
                   borderRadius: 14,
                   transition: "background 0.2s ease",
                 }}
               >
                 <Avatar
-                  size={isMobile ? 36 : 40}
+                  size={isMobile ? 34 : 40}
                   style={{
                     backgroundColor: isDark ? "#1e293b" : "#e2e8f0",
                     color: isDark ? "#cbd5e1" : "#334155",
@@ -630,6 +684,7 @@ useEffect(() => {
                       ? "1px solid rgba(148, 163, 184, 0.18)"
                       : "1px solid rgba(15, 23, 42, 0.08)",
                     fontWeight: 700,
+                    flexShrink: 0,
                   }}
                 >
                   {avatarInitial}
@@ -669,15 +724,25 @@ useEffect(() => {
           </Space>
         </Header>
 
-        <Content style={{ margin: isMobile ? 16 : 20 }}>
+        <Content
+          style={{
+            margin: isMobile ? 10 : 20,
+            overflowX: "hidden",
+            minWidth: 0,
+          }}
+        >
           <div
             style={{
-              minHeight: isMobile ? "calc(100vh - 108px)" : "calc(100vh - 116px)",
+              minHeight: isMobile
+                ? "calc(100vh - 92px)"
+                : "calc(100vh - 116px)",
               background: "transparent",
-              borderRadius: 20,
+              borderRadius: isMobile ? 14 : 20,
               padding: 0,
               boxShadow: "none",
               transition: "all 0.28s ease",
+              minWidth: 0,
+              overflowX: "hidden",
             }}
           >
             <Outlet />
