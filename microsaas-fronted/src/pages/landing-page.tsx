@@ -1,4 +1,7 @@
 import type { CSSProperties } from "react";
+import { Grid, Drawer } from "antd";
+import { MenuOutlined } from "@ant-design/icons";
+import { useState } from "react";
 import {
   Layout,
   Typography,
@@ -35,6 +38,7 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../app/store/auth.store";
 
 const { Header, Content, Footer } = Layout;
+const { useBreakpoint } = Grid;
 const { Title, Paragraph, Text } = Typography;
 
 const HEADER_HEIGHT = 78;
@@ -101,6 +105,60 @@ function DecorativeBackground() {
 export function LandingPage() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const isTablet = screens.md && !screens.lg;
+  const isLaptop = screens.lg && !screens.xl;
+
+  const responsiveSectionStyle: CSSProperties = {
+    ...sectionBaseStyle,
+    padding: isMobile ? "64px 16px" : isTablet ? "82px 22px" : "110px 24px",
+    scrollMarginTop: isMobile ? 72 : HEADER_HEIGHT + 24,
+  };
+
+  const heroSectionStyle: CSSProperties = {
+    ...responsiveSectionStyle,
+    paddingTop: isMobile ? 56 : isTablet ? 84 : 120,
+    paddingBottom: isMobile ? 64 : isTablet ? 76 : 90,
+  };
+
+  const heroTitleStyle: CSSProperties = {
+    color: "white",
+    margin: 0,
+    fontSize: isMobile ? 34 : isTablet ? 44 : isLaptop ? 52 : 58,
+    lineHeight: isMobile ? 1.12 : 1.02,
+    letterSpacing: isMobile ? "-0.7px" : "-1.4px",
+    maxWidth: 720,
+  };
+
+  const sectionTitleStyle: CSSProperties = {
+    color: "white",
+    marginBottom: 12,
+    fontSize: isMobile ? 28 : isTablet ? 34 : undefined,
+    lineHeight: 1.15,
+  };
+
+  const sectionParagraphStyle: CSSProperties = {
+    color: "#aebbd1",
+    maxWidth: 780,
+    margin: "0 auto",
+    fontSize: isMobile ? 15 : 18,
+    lineHeight: 1.75,
+  };
+
+  const ctaBoxStyle: CSSProperties = {
+    maxWidth: 1150,
+    margin: "0 auto",
+    borderRadius: isMobile ? 22 : 30,
+    padding: isMobile ? 24 : isTablet ? 38 : 52,
+    background:
+      "linear-gradient(135deg, rgba(22,119,255,0.22), rgba(124,58,237,0.22))",
+    border: "1px solid rgba(255,255,255,0.10)",
+    textAlign: "center",
+    boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
+  };
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to="/app/dashboard" replace />;
@@ -108,14 +166,17 @@ export function LandingPage() {
 
   return (
     <Layout
-      style={{ minHeight: "100vh", background: "#020617", position: "relative" }}
+      style={{
+        minHeight: "100vh",
+        background: "#020617",
+        position: "relative",
+        overflowX: "hidden",
+      }}
     >
       <DecorativeBackground />
-
       <Header
         style={{
           height: HEADER_HEIGHT,
-          lineHeight: `${HEADER_HEIGHT}px`,
           position: "sticky",
           top: 0,
           zIndex: 100,
@@ -124,7 +185,7 @@ export function LandingPage() {
           justifyContent: "space-between",
           background: "rgba(2, 6, 23, 0.72)",
           borderBottom: "1px solid rgba(255,255,255,0.08)",
-          padding: "0 24px",
+          padding: isMobile ? "0 16px" : "0 24px",
           backdropFilter: "blur(16px)",
         }}
       >
@@ -133,110 +194,128 @@ export function LandingPage() {
             src="/taloslogo.png"
             alt="TalosFlow AI"
             style={{
-              width: 44,
-              height: 44,
+              width: isMobile ? 38 : 44,
+              height: isMobile ? 38 : 44,
               objectFit: "contain",
               borderRadius: 12,
               flexShrink: 0,
-              boxShadow: "0 0 24px rgba(56,189,248,0.22)",
             }}
           />
 
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center",
-            }}
-          >
+          <div>
             <Title
-              level={4}
-              style={{ color: "white", margin: 0, lineHeight: 1.1 }}
+              level={isMobile ? 5 : 4}
+              style={{
+                color: "white",
+                margin: 0,
+                lineHeight: 1.1,
+              }}
             >
               TalosFlow AI
             </Title>
-            <Text style={{ color: "#7dd3fc", fontSize: 12, lineHeight: 1.1 }}>
-              Intelligent Content Engine
-            </Text>
+
+            {!isMobile && (
+              <Text style={{ color: "#7dd3fc", fontSize: 12 }}>
+                Intelligent Content Engine
+              </Text>
+            )}
           </div>
         </Space>
 
-        <Space size="large" wrap>
-          <a
-            href="#beneficios"
-            style={{ color: "#b8c4dc", textDecoration: "none", fontWeight: 500 }}
-          >
-            Beneficios
-          </a>
-          <a
-            href="#como-funciona"
-            style={{ color: "#b8c4dc", textDecoration: "none", fontWeight: 500 }}
-          >
-            Flujo
-          </a>
-          <a
-            href="#quienes-somos"
-            style={{ color: "#b8c4dc", textDecoration: "none", fontWeight: 500 }}
-          >
-            Nosotros
-          </a>
-          <a
-            href="#servicios"
-            style={{ color: "#b8c4dc", textDecoration: "none", fontWeight: 500 }}
-          >
-            Servicios
-          </a>
-          <a
-            href="#planes"
-            style={{ color: "#b8c4dc", textDecoration: "none", fontWeight: 500 }}
-          >
-            Planes
-          </a>
-          <a
-            href="#faq"
-            style={{ color: "#b8c4dc", textDecoration: "none", fontWeight: 500 }}
-          >
-            FAQ
-          </a>
+        {isMobile ? (
+          <>
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setMobileMenuOpen(true)}
+              style={{ color: "white" }}
+            />
 
-          <Button
-            onClick={() => navigate("/auth/login")}
-            style={{
-              borderRadius: 999,
-              background: "rgba(255,255,255,0.06)",
-              borderColor: "rgba(255,255,255,0.14)",
-              color: "white",
-            }}
-          >
-            Iniciar sesión
-          </Button>
+            <Drawer
+              placement="right"
+              open={mobileMenuOpen}
+              onClose={() => setMobileMenuOpen(false)}
+              styles={{
+                header: {
+                  background: "#020617",
+                  borderBottom: "1px solid rgba(255,255,255,0.08)",
+                },
+                body: {
+                  background: "#020617",
+                },
+              }}
+            >
+              <Space
+                direction="vertical"
+                size="large"
+                style={{ width: "100%" }}
+              >
+                {[
+                  ["#beneficios", "Beneficios"],
+                  ["#como-funciona", "Flujo"],
+                  ["#quienes-somos", "Nosotros"],
+                  ["#servicios", "Servicios"],
+                  ["#planes", "Planes"],
+                  ["#faq", "FAQ"],
+                ].map(([href, label]) => (
+                  <a
+                    key={href}
+                    href={href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      color: "white",
+                      fontSize: 16,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {label}
+                  </a>
+                ))}
 
-          <Button
-            type="primary"
-            onClick={() => navigate("/auth/signup")}
-            style={{
-              borderRadius: 999,
-              background: "linear-gradient(90deg, #1677ff, #7c3aed)",
-              border: "none",
-              boxShadow: "0 8px 24px rgba(124,58,237,0.28)",
-            }}
-          >
-            Activar TalosFlow
-          </Button>
-        </Space>
+                <Button block onClick={() => navigate("/auth/login")}>
+                  Iniciar sesión
+                </Button>
+
+                <Button
+                  type="primary"
+                  block
+                  onClick={() => navigate("/auth/signup")}
+                >
+                  Activar TalosFlow
+                </Button>
+              </Space>
+            </Drawer>
+          </>
+        ) : (
+          <Space size="large">
+            <a href="#beneficios">Beneficios</a>
+            <a href="#como-funciona">Flujo</a>
+            <a href="#quienes-somos">Nosotros</a>
+            <a href="#servicios">Servicios</a>
+            <a href="#planes">Planes</a>
+            <a href="#faq">FAQ</a>
+
+            <Button
+              onClick={() => navigate("/auth/login")}
+              style={{
+                borderRadius: 999,
+              }}
+            >
+              Iniciar sesión
+            </Button>
+          </Space>
+        )}
       </Header>
 
       <Content style={{ position: "relative", zIndex: 1 }}>
-        <section
-          style={{
-            ...sectionBaseStyle,
-            paddingTop: 120,
-            paddingBottom: 90,
-          }}
-        >
+        <section style={heroSectionStyle}>
           <Row gutter={[42, 42]} align="middle">
             <Col xs={24} lg={12}>
-              <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              <Space
+                direction="vertical"
+                size="large"
+                style={{ width: "100%" }}
+              >
                 <Space wrap>
                   <Tag
                     style={{
@@ -267,16 +346,7 @@ export function LandingPage() {
                 </Space>
 
                 <div>
-                  <Title
-                    style={{
-                      color: "white",
-                      margin: 0,
-                      fontSize: 58,
-                      lineHeight: 1.02,
-                      letterSpacing: "-1.4px",
-                      maxWidth: 720,
-                    }}
-                  >
+                  <Title style={heroTitleStyle}>
                     Tu motor de contenido{" "}
                     <span
                       style={{
@@ -295,24 +365,30 @@ export function LandingPage() {
                 <Paragraph
                   style={{
                     color: "#b8c4dc",
-                    fontSize: 19,
-                    lineHeight: 1.8,
+                    fontSize: isMobile ? 16 : 19,
+                    lineHeight: 1.75,
                     marginBottom: 0,
                     maxWidth: 650,
                   }}
                 >
                   TalosFlow AI convierte ideas en copy, visuales y publicaciones
-                  listas para ejecutarse. Automatiza tu flujo y mantén tu identidad
-                  visual con una operación más rápida, precisa y profesional.
+                  listas para ejecutarse. Automatiza tu flujo y mantén tu
+                  identidad visual con una operación más rápida, precisa y
+                  profesional.
                 </Paragraph>
 
-                <Space size="middle" wrap>
+                <Space
+                  size="middle"
+                  wrap
+                  style={{ width: isMobile ? "100%" : undefined }}
+                >
                   <Button
                     type="primary"
                     size="large"
                     onClick={() => navigate("/auth/signup")}
                     style={{
                       height: 48,
+                      width: isMobile ? "100%" : undefined,
                       paddingInline: 24,
                       borderRadius: 999,
                       background: "linear-gradient(90deg, #1677ff, #7c3aed)",
@@ -328,6 +404,7 @@ export function LandingPage() {
                     onClick={() => navigate("/auth/login")}
                     style={{
                       height: 48,
+                      width: isMobile ? "100%" : undefined,
                       paddingInline: 24,
                       borderRadius: 999,
                       background: "rgba(255,255,255,0.04)",
@@ -374,8 +451,8 @@ export function LandingPage() {
               <div
                 style={{
                   position: "relative",
-                  borderRadius: 30,
-                  padding: 22,
+                  borderRadius: isMobile ? 22 : 30,
+                  padding: isMobile ? 12 : 22,
                   background: "rgba(8,12,28,0.68)",
                   border: "1px solid rgba(125,211,252,0.14)",
                   boxShadow:
@@ -459,7 +536,7 @@ export function LandingPage() {
                     </Text>
                   </div>
 
-                  <div style={{ padding: 20 }}>
+                  <div style={{ padding: isMobile ? 12 : 20 }}>
                     <Row gutter={[16, 16]}>
                       <Col span={24}>
                         <Card
@@ -487,7 +564,7 @@ export function LandingPage() {
                         </Card>
                       </Col>
 
-                      <Col span={12}>
+                      <Col xs={24} sm={12}>
                         <Card
                           bordered={false}
                           style={{
@@ -514,7 +591,7 @@ export function LandingPage() {
                         </Card>
                       </Col>
 
-                      <Col span={12}>
+                      <Col xs={24} sm={12}>
                         <Card
                           bordered={false}
                           style={{
@@ -554,9 +631,7 @@ export function LandingPage() {
                           <Row gutter={[12, 12]}>
                             <Col xs={24} sm={12}>
                               <Space direction="vertical" size={2}>
-                                <Text style={{ color: "#d8e3f8" }}>
-                                  Estado
-                                </Text>
+                                <Text style={{ color: "#d8e3f8" }}>Estado</Text>
                                 <Title
                                   level={4}
                                   style={{ color: "white", margin: 0 }}
@@ -587,7 +662,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section id="beneficios" style={sectionBaseStyle}>
+        <section id="beneficios" style={responsiveSectionStyle}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <Tag
               style={{
@@ -601,17 +676,10 @@ export function LandingPage() {
             >
               CORE SYSTEM
             </Tag>
-            <Title style={{ color: "white", marginBottom: 12 }}>
+            <Title style={sectionTitleStyle}>
               Arquitectura pensada para velocidad, consistencia y escala
             </Title>
-            <Paragraph
-              style={{
-                color: "#aebbd1",
-                maxWidth: 780,
-                margin: "0 auto",
-                fontSize: 18,
-              }}
-            >
+            <Paragraph style={sectionParagraphStyle}>
               TalosFlow AI no solo genera contenido. Orquesta un sistema
               completo de creación, branding y publicación para operar con
               precisión.
@@ -675,7 +743,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section id="como-funciona" style={sectionBaseStyle}>
+        <section id="como-funciona" style={responsiveSectionStyle}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <Tag
               style={{
@@ -689,17 +757,10 @@ export function LandingPage() {
             >
               TALOSFLOW PIPELINE
             </Tag>
-            <Title style={{ color: "white", marginBottom: 12 }}>
+            <Title style={sectionTitleStyle}>
               Un flujo inteligente desde la idea hasta la publicación
             </Title>
-            <Paragraph
-              style={{
-                color: "#aebbd1",
-                maxWidth: 760,
-                margin: "0 auto",
-                fontSize: 18,
-              }}
-            >
+            <Paragraph style={sectionParagraphStyle}>
               Tu operación de contenido se convierte en un sistema continuo,
               predecible y profesional.
             </Paragraph>
@@ -749,7 +810,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section id="quienes-somos" style={sectionBaseStyle}>
+        <section id="quienes-somos" style={responsiveSectionStyle}>
           <Row gutter={[32, 32]} align="middle">
             <Col xs={24} lg={10}>
               <Tag
@@ -766,8 +827,8 @@ export function LandingPage() {
               </Tag>
 
               <Title style={{ color: "white", marginBottom: 16 }}>
-                Somos una plataforma construida para transformar contenido en una
-                operación inteligente
+                Somos una plataforma construida para transformar contenido en
+                una operación inteligente
               </Title>
 
               <Paragraph
@@ -808,8 +869,8 @@ export function LandingPage() {
                       Misión
                     </Title>
                     <Text style={{ color: "#b6c2d9" }}>
-                      Ayudar a las marcas a producir y publicar contenido con más
-                      velocidad, coherencia visual y capacidad operativa.
+                      Ayudar a las marcas a producir y publicar contenido con
+                      más velocidad, coherencia visual y capacidad operativa.
                     </Text>
                   </Card>
                 </Col>
@@ -831,7 +892,9 @@ export function LandingPage() {
 
                 <Col xs={24}>
                   <Card bordered={false} style={glassCardStyle}>
-                    <GlobalOutlined style={{ fontSize: 30, color: "#93c5fd" }} />
+                    <GlobalOutlined
+                      style={{ fontSize: 30, color: "#93c5fd" }}
+                    />
                     <Title level={4} style={{ color: "white", marginTop: 16 }}>
                       Enfoque
                     </Title>
@@ -847,7 +910,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section id="servicios" style={sectionBaseStyle}>
+        <section id="servicios" style={responsiveSectionStyle}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <Tag
               style={{
@@ -861,17 +924,10 @@ export function LandingPage() {
             >
               SERVICIOS / CAPACIDADES
             </Tag>
-            <Title style={{ color: "white", marginBottom: 12 }}>
+            <Title style={sectionTitleStyle}>
               Lo que puedes activar dentro de TalosFlow AI
             </Title>
-            <Paragraph
-              style={{
-                color: "#aebbd1",
-                maxWidth: 760,
-                margin: "0 auto",
-                fontSize: 18,
-              }}
-            >
+            <Paragraph style={sectionParagraphStyle}>
               Más que funciones aisladas, TalosFlow AI ofrece capacidades
               integradas para operar contenido con estructura profesional.
             </Paragraph>
@@ -893,9 +949,7 @@ export function LandingPage() {
 
             <Col xs={24} md={12} lg={8}>
               <Card bordered={false} style={glassCardStyle}>
-                <BgColorsOutlined
-                  style={{ fontSize: 30, color: "#c4b5fd" }}
-                />
+                <BgColorsOutlined style={{ fontSize: 30, color: "#c4b5fd" }} />
                 <Title level={4} style={{ color: "white", marginTop: 16 }}>
                   Branding aplicado
                 </Title>
@@ -962,7 +1016,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section style={sectionBaseStyle}>
+        <section style={responsiveSectionStyle}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <Tag
               style={{
@@ -976,17 +1030,10 @@ export function LandingPage() {
             >
               BUILT FOR
             </Tag>
-            <Title style={{ color: "white", marginBottom: 12 }}>
+            <Title style={sectionTitleStyle}>
               Diseñado para operaciones que necesitan velocidad y control
             </Title>
-            <Paragraph
-              style={{
-                color: "#aebbd1",
-                maxWidth: 760,
-                margin: "0 auto",
-                fontSize: 18,
-              }}
-            >
+            <Paragraph style={sectionParagraphStyle}>
               TalosFlow AI encaja donde el volumen, la calidad y la consistencia
               ya no pueden depender de procesos manuales.
             </Paragraph>
@@ -1036,7 +1083,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section id="planes" style={sectionBaseStyle}>
+        <section id="planes" style={responsiveSectionStyle}>
           <div style={{ marginBottom: 34 }}>
             <Tag
               style={{
@@ -1055,9 +1102,11 @@ export function LandingPage() {
               Elige el plan ideal para tu operación
             </Title>
 
-            <Paragraph style={{ color: "#aebbd1", fontSize: 16, marginBottom: 0 }}>
-              Los planes se cargan desde backend y el usuario puede elegir cualquiera
-              directamente según sus necesidades.
+            <Paragraph
+              style={{ color: "#aebbd1", fontSize: 16, marginBottom: 0 }}
+            >
+              Los planes se cargan desde backend y el usuario puede elegir
+              cualquiera directamente según sus necesidades.
             </Paragraph>
           </div>
 
@@ -1164,7 +1213,11 @@ export function LandingPage() {
                       : "0 10px 35px rgba(0,0,0,0.24)",
                   }}
                 >
-                  <Space direction="vertical" size={14} style={{ width: "100%" }}>
+                  <Space
+                    direction="vertical"
+                    size={14}
+                    style={{ width: "100%" }}
+                  >
                     <Space>
                       <Title level={4} style={{ color: "white", margin: 0 }}>
                         {plan.name}
@@ -1206,9 +1259,15 @@ export function LandingPage() {
                       </Tag>
                     )}
 
-                    <Divider style={{ borderColor: "rgba(255,255,255,0.10)" }} />
+                    <Divider
+                      style={{ borderColor: "rgba(255,255,255,0.10)" }}
+                    />
 
-                    <Space direction="vertical" size={12} style={{ width: "100%" }}>
+                    <Space
+                      direction="vertical"
+                      size={12}
+                      style={{ width: "100%" }}
+                    >
                       {plan.features.map((feature) => (
                         <Text key={feature} style={{ color: "white" }}>
                           ✓ {feature}
@@ -1216,7 +1275,9 @@ export function LandingPage() {
                       ))}
                     </Space>
 
-                    <Divider style={{ borderColor: "rgba(255,255,255,0.10)" }} />
+                    <Divider
+                      style={{ borderColor: "rgba(255,255,255,0.10)" }}
+                    />
 
                     <Button
                       block
@@ -1243,7 +1304,7 @@ export function LandingPage() {
           </Row>
         </section>
 
-        <section id="faq" style={sectionBaseStyle}>
+        <section id="faq" style={responsiveSectionStyle}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <Tag
               style={{
@@ -1257,17 +1318,8 @@ export function LandingPage() {
             >
               FAQ
             </Tag>
-            <Title style={{ color: "white", marginBottom: 12 }}>
-              Preguntas frecuentes
-            </Title>
-            <Paragraph
-              style={{
-                color: "#aebbd1",
-                maxWidth: 760,
-                margin: "0 auto",
-                fontSize: 18,
-              }}
-            >
+            <Title style={sectionTitleStyle}>Preguntas frecuentes</Title>
+            <Paragraph style={sectionParagraphStyle}>
               Respuestas rápidas para entender cómo funciona TalosFlow AI y cómo
               puede encajar en tu operación.
             </Paragraph>
@@ -1387,24 +1439,12 @@ export function LandingPage() {
 
         <section
           style={{
-            padding: "0 24px 100px",
+            padding: isMobile ? "0 16px 64px" : "0 24px 100px",
             position: "relative",
             zIndex: 2,
           }}
         >
-          <div
-            style={{
-              maxWidth: 1150,
-              margin: "0 auto",
-              borderRadius: 30,
-              padding: 52,
-              background:
-                "linear-gradient(135deg, rgba(22,119,255,0.22), rgba(124,58,237,0.22))",
-              border: "1px solid rgba(255,255,255,0.10)",
-              textAlign: "center",
-              boxShadow: "0 24px 70px rgba(0,0,0,0.28)",
-            }}
-          >
+          <div style={ctaBoxStyle}>
             <Title style={{ color: "white", marginTop: 0, marginBottom: 12 }}>
               Activa el flujo. Escala tu marca. Publica con inteligencia.
             </Title>
@@ -1421,7 +1461,13 @@ export function LandingPage() {
               operativa mucho más rápida, coherente y potente.
             </Paragraph>
 
-            <Space wrap>
+            <Space
+              wrap
+              style={{
+                width: isMobile ? "100%" : undefined,
+                justifyContent: "center",
+              }}
+            >
               <Button
                 type="primary"
                 size="large"
@@ -1462,7 +1508,7 @@ export function LandingPage() {
           borderTop: "1px solid rgba(255,255,255,0.06)",
           position: "relative",
           zIndex: 2,
-          padding: "56px 24px 28px",
+          padding: isMobile ? "40px 16px 24px" : "56px 24px 28px",
         }}
       >
         <div style={{ maxWidth: 1280, margin: "0 auto" }}>
@@ -1586,9 +1632,7 @@ export function LandingPage() {
                 >
                   Crear cuenta
                 </button>
-                <Text style={{ color: "#aebbd1" }}>
-                  contacto@talosflow.ai
-                </Text>
+                <Text style={{ color: "#aebbd1" }}>contacto@talosflow.ai</Text>
               </Space>
             </Col>
           </Row>

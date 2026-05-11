@@ -82,11 +82,11 @@ export function DashboardPage() {
           onGoAi={() => navigate("/app/ai")}
         />
 
-        <Alert
-          type="error"
+       <Alert
+          type="warning"
           showIcon
-          message="No se pudo cargar el dashboard"
-          description="Verifica tu conexión, el backend o la sesión actual."
+          message="Algunas estadísticas no están disponibles."
+          description="Intenta actualizar la página en unos segundos."
         />
       </div>
     );

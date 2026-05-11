@@ -70,15 +70,17 @@ export function AppLayout() {
   const isMobile = !screens.lg;
 
   const logout = useAuthStore((state) => state.logout);
-  const schema = useAuthStore((state) => state.schema);
-  const role = useAuthStore((state) => state.role);
-  const userId = useAuthStore((state) => state.userId);
+const schema = useAuthStore((state) => state.schema);
+const role = useAuthStore((state) => state.role);
+const scope = useAuthStore((state) => state.scope);
 
-  const { data: currentUser } = useCurrentUser(userId);
+const canManageOrganization =
+  scope === "TENANT" && (role === "OWNER" || role === "ADMIN");
+
+  const { data: currentUser } = useCurrentUser();
 
   const [cachedUser, setCachedUser] = useState<typeof currentUser | null>(() => {
     const saved = localStorage.getItem("current_user");
-
     if (!saved) return null;
 
     try {
@@ -144,12 +146,6 @@ export function AppLayout() {
         title: "Posts",
       },
       {
-        key: "/app/billing",
-        icon: <CreditCardOutlined />,
-        label: "Billing",
-        title: "Billing",
-      },
-      {
         key: "/app/referrals",
         icon: <ShareAltOutlined />,
         label: "Referrals",
@@ -157,17 +153,25 @@ export function AppLayout() {
       },
     ];
 
-    if (role === "OWNER" || role === "ADMIN") {
-      baseItems.splice(6, 0, {
-        key: "/app/users",
-        icon: <UserOutlined />,
-        label: "Users",
-        title: "Users",
-      });
+    if (canManageOrganization) {
+      baseItems.push(
+        {
+          key: "/app/billing",
+          icon: <CreditCardOutlined />,
+          label: "Billing",
+          title: "Billing",
+        },
+        {
+          key: "/app/users",
+          icon: <UserOutlined />,
+          label: "Users",
+          title: "Users",
+        }
+      );
     }
 
     return baseItems;
-  }, [role]);
+  }, [canManageOrganization]);
 
   const displayOrganization = formatOrganizationName(schema || "Organización");
   const displayRole = roleMap[role || "USER"] || "Usuario";
@@ -200,12 +204,16 @@ export function AppLayout() {
       label: "Ajustes",
       onClick: () => navigate("/app/settings"),
     },
-    {
-      key: "billing",
-      icon: <CreditCardOutlined />,
-      label: "Billing",
-      onClick: () => navigate("/app/billing"),
-    },
+    ...(canManageOrganization
+      ? [
+          {
+            key: "billing",
+            icon: <CreditCardOutlined />,
+            label: "Billing",
+            onClick: () => navigate("/app/billing"),
+          },
+        ]
+      : []),
     {
       type: "divider",
     },

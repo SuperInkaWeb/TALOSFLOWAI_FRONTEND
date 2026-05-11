@@ -7,6 +7,11 @@ import type {
 } from "../types/user.types";
 
 export const userService = {
+  async getMe(): Promise<UserItem> {
+    const response = await api.get<UserItem>("/users/me");
+    return response.data;
+  },
+
   async getUsers(): Promise<UserItem[]> {
     const response = await api.get<UserItem[]>("/users");
     return response.data;

@@ -232,7 +232,7 @@ export function AccountPage() {
     isLoading,
     isError,
     error,
-  } = useCurrentUser(currentUserId);
+  } = useCurrentUser();
 
   const { data: billingUsage } = useBillingUsage();
 

@@ -23,6 +23,8 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import type { AxiosError } from "axios";
+
+import { useAuthStore } from "../app/store/auth.store";
 import { useBillingPlans } from "../features/billing/hooks/use-billing-plans";
 import { useBillingSubscription } from "../features/billing/hooks/use-billing-subscription";
 import { useBillingUsage } from "../features/billing/hooks/use-billing-usage";
@@ -33,9 +35,7 @@ import {
   getPlanActionLabel,
   isCurrentPlan,
 } from "../features/billing/utils/billing.helpers";
-import type {
-  BillingPlanResponse
-} from "../types/billing.types";
+import type { BillingPlanResponse } from "../types/billing.types";
 
 const { Title, Text } = Typography;
 
@@ -92,12 +92,27 @@ function formatPrice(priceCents: number, currency: string) {
 function getApiErrorMessage(error: unknown) {
   const axiosError = error as AxiosError<ApiErrorBody> | undefined;
 
-  return (
+  const text =
     axiosError?.response?.data?.message ||
     axiosError?.response?.data?.error ||
     axiosError?.message ||
-    ""
-  );
+    "";
+
+  const lower = text.toLowerCase();
+
+  if (
+    lower.includes("sql") ||
+    lower.includes("column") ||
+    lower.includes("hibernate") ||
+    lower.includes("jdbc") ||
+    lower.includes("position:") ||
+    lower.includes("constraint") ||
+    lower.includes("syntax")
+  ) {
+    return "Ocurrió un error interno. Intenta nuevamente.";
+  }
+
+  return text || "Ocurrió un error inesperado.";
 }
 
 function getFirstQueryErrorMessage(...errors: unknown[]) {
@@ -156,6 +171,9 @@ function getFriendlyWarningText(warning: string) {
 export function BillingPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  const role = useAuthStore((state) => state.role);
+  const canManageBilling = role === "OWNER" || role === "ADMIN";
+
   const {
     data: plans,
     isLoading: plansLoading,
@@ -205,6 +223,13 @@ export function BillingPage() {
   const warnings = useMemo(() => usage?.warnings ?? [], [usage]);
 
   const handleOpenPortal = async () => {
+    if (!canManageBilling) {
+      message.warning(
+        "Solo el propietario o administrador puede gestionar la suscripción."
+      );
+      return;
+    }
+
     try {
       const url = await portalMutation.mutateAsync();
       window.location.href = url;
@@ -215,6 +240,13 @@ export function BillingPage() {
   };
 
   const handlePlanAction = async (plan: BillingPlanResponse) => {
+    if (!canManageBilling) {
+      message.warning(
+        "Solo el propietario o administrador puede cambiar el plan."
+      );
+      return;
+    }
+
     try {
       if (isCurrentPlan(subscription, plan)) {
         return;
@@ -283,11 +315,22 @@ export function BillingPage() {
           <Title level={2} style={{ marginBottom: 4 }}>
             Billing y planes
           </Title>
+
           <Text type="secondary">
-            Gestiona tu suscripción, revisa límites y elige el plan que mejor se
-            adapte a tu negocio.
+            {canManageBilling
+              ? "Gestiona tu suscripción, revisa límites y elige el plan que mejor se adapte a tu negocio."
+              : "Puedes revisar el plan y el uso actual. La suscripción la gestiona el propietario o administrador."}
           </Text>
         </div>
+
+        {!canManageBilling && (
+          <Alert
+            type="info"
+            showIcon
+            message="Gestión de suscripción restringida"
+            description="Solo el propietario o administrador puede cambiar planes, abrir Stripe o administrar la suscripción."
+          />
+        )}
 
         <Card>
           <Row gutter={[16, 16]} align="middle">
@@ -328,7 +371,7 @@ export function BillingPage() {
 
             <Col xs={24} md={8}>
               <Space direction="vertical" style={{ width: "100%" }}>
-                {canUseCustomerPortal(subscription) && (
+                {canManageBilling && canUseCustomerPortal(subscription) && (
                   <Button
                     type="primary"
                     icon={<CreditCardOutlined />}
@@ -337,6 +380,12 @@ export function BillingPage() {
                     block
                   >
                     Administrar suscripción
+                  </Button>
+                )}
+
+                {!canManageBilling && canUseCustomerPortal(subscription) && (
+                  <Button disabled block icon={<CreditCardOutlined />}>
+                    Solo owner/admin
                   </Button>
                 )}
               </Space>
@@ -428,8 +477,9 @@ export function BillingPage() {
             Planes disponibles
           </Title>
           <Text type="secondary">
-            Los planes se cargan desde backend y el usuario puede elegir
-            cualquiera directamente.
+            {canManageBilling
+              ? "Puedes elegir o cambiar el plan de la organización."
+              : "Estos son los planes disponibles. Para cambiar de plan, solicita ayuda al propietario o administrador."}
           </Text>
         </div>
 
@@ -442,10 +492,11 @@ export function BillingPage() {
             return (
               <Col xs={24} md={12} xl={6} key={plan.id}>
                 <Card
-                  hoverable
+                  hoverable={canManageBilling}
                   style={{
                     height: "100%",
                     borderWidth: plan.code === "PLUS" ? 2 : 1,
+                    opacity: canManageBilling || current ? 1 : 0.85,
                   }}
                 >
                   <Space
@@ -494,16 +545,21 @@ export function BillingPage() {
                       icon={
                         !current ? <RocketOutlined /> : <ThunderboltOutlined />
                       }
-                      disabled={current}
+                      disabled={current || !canManageBilling}
                       loading={
-                        (checkoutMutation.isPending &&
+                        canManageBilling &&
+                        ((checkoutMutation.isPending &&
                           checkoutMutation.variables === plan.id) ||
-                        portalMutation.isPending
+                          portalMutation.isPending)
                       }
                       onClick={() => handlePlanAction(plan)}
                       block
                     >
-                      {actionLabel}
+                      {!canManageBilling
+                        ? current
+                          ? "Plan actual"
+                          : "Solo owner/admin"
+                        : actionLabel}
                     </Button>
                   </Space>
                 </Card>

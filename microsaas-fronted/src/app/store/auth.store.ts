@@ -1,32 +1,34 @@
 import { create } from "zustand";
 import { jwtDecode } from "jwt-decode";
 
+export type UserRole = "OWNER" | "ADMIN" | "EDITOR" | "VIEWER" | "SUPER_ADMIN";
+export type UserScope = "TENANT" | "PLATFORM";
+
 type JwtPayload = {
   sub?: string;
   userId?: number;
-  scope?: "TENANT" | "PLATFORM";
+  scope?: UserScope;
   orgId?: number;
   schema?: string;
-  role?: string;
+  role?: UserRole;
+  exp?: number;
 };
 
 type UserSession = {
   token: string | null;
   isAuthenticated: boolean;
   userId?: number;
-  scope?: "TENANT" | "PLATFORM";
+  scope?: UserScope;
   orgId?: number;
   schema?: string;
-  role?: string;
+  role?: UserRole;
 
   setToken: (token: string) => void;
   logout: () => void;
 };
 
 function extractUserId(decoded: JwtPayload): number | undefined {
-  if (typeof decoded.userId === "number") {
-    return decoded.userId;
-  }
+  if (typeof decoded.userId === "number") return decoded.userId;
 
   if (decoded.sub) {
     const parsed = Number(decoded.sub);
@@ -36,44 +38,69 @@ function extractUserId(decoded: JwtPayload): number | undefined {
   return undefined;
 }
 
+function isTokenExpired(decoded: JwtPayload): boolean {
+  if (!decoded.exp) return false;
+  return decoded.exp * 1000 < Date.now();
+}
+
+function emptySession() {
+  return {
+    token: null,
+    isAuthenticated: false,
+    userId: undefined,
+    scope: undefined,
+    orgId: undefined,
+    schema: undefined,
+    role: undefined,
+  };
+}
+
 const savedToken = localStorage.getItem("access_token");
 
-let initialToken: string | null = null;
-let initialIsAuthenticated = false;
-let initialUserId: number | undefined = undefined;
-let initialScope: "TENANT" | "PLATFORM" | undefined = undefined;
-let initialOrgId: number | undefined = undefined;
-let initialSchema: string | undefined = undefined;
-let initialRole: string | undefined = undefined;
+let initialState: Omit<UserSession, "setToken" | "logout"> = {
+  token: null,
+  isAuthenticated: false,
+  userId: undefined,
+  scope: undefined,
+  orgId: undefined,
+  schema: undefined,
+  role: undefined,
+};
 
 if (savedToken) {
   try {
     const decoded = jwtDecode<JwtPayload>(savedToken);
 
-    initialToken = savedToken;
-    initialIsAuthenticated = true;
-    initialUserId = extractUserId(decoded);
-    initialScope = decoded.scope ?? "TENANT";
-    initialOrgId = decoded.orgId;
-    initialSchema = decoded.schema;
-    initialRole = decoded.role;
+    if (isTokenExpired(decoded)) {
+      localStorage.removeItem("access_token");
+    } else {
+      initialState = {
+        token: savedToken,
+        isAuthenticated: true,
+        userId: extractUserId(decoded),
+        scope: decoded.scope ?? "TENANT",
+        orgId: decoded.orgId,
+        schema: decoded.schema,
+        role: decoded.role,
+      };
+    }
   } catch {
     localStorage.removeItem("access_token");
   }
 }
 
 export const useAuthStore = create<UserSession>((set) => ({
-  token: initialToken,
-  isAuthenticated: initialIsAuthenticated,
-  userId: initialUserId,
-  scope: initialScope,
-  orgId: initialOrgId,
-  schema: initialSchema,
-  role: initialRole,
+  ...initialState,
 
   setToken: (token: string) => {
     try {
       const decoded = jwtDecode<JwtPayload>(token);
+
+      if (isTokenExpired(decoded)) {
+        localStorage.removeItem("access_token");
+        set(emptySession());
+        return;
+      }
 
       localStorage.setItem("access_token", token);
 
@@ -88,30 +115,12 @@ export const useAuthStore = create<UserSession>((set) => ({
       });
     } catch {
       localStorage.removeItem("access_token");
-
-      set({
-        token: null,
-        isAuthenticated: false,
-        userId: undefined,
-        scope: undefined,
-        orgId: undefined,
-        schema: undefined,
-        role: undefined,
-      });
+      set(emptySession());
     }
   },
 
   logout: () => {
     localStorage.removeItem("access_token");
-
-    set({
-      token: null,
-      isAuthenticated: false,
-      userId: undefined,
-      scope: undefined,
-      orgId: undefined,
-      schema: undefined,
-      role: undefined,
-    });
+    set(emptySession());
   },
 }));

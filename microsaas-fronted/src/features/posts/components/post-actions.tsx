@@ -1,33 +1,18 @@
 import { Button, Popconfirm, Space, Tag, message } from "antd";
 import type { PostItem } from "../../../types/post.types";
+
 import { useCancelPost } from "../hooks/use-cancel-post";
 import { usePublishPost } from "../hooks/use-publish-post";
 import { useRestorePost } from "../hooks/use-restore-post";
+
+import { getApiErrorMessage } from "../../../shared/utils/error.utils";
 
 type Props = {
   post: PostItem;
   onEdit: (post: PostItem) => void;
 };
 
-function getErrorMessage(error: unknown, fallback: string) {
-  if (
-    error &&
-    typeof error === "object" &&
-    "response" in error &&
-    error.response &&
-    typeof error.response === "object" &&
-    "data" in error.response
-  ) {
-    const data = error.response.data as { message?: string; error?: string };
-    return data?.message || data?.error || fallback;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return fallback;
-}
+const ACTION_MESSAGE_KEY = "post-action";
 
 export function PostActions({ post, onEdit }: Props) {
   const publishMutation = usePublishPost();
@@ -40,39 +25,96 @@ export function PostActions({ post, onEdit }: Props) {
     restoreMutation.isPending;
 
   const handlePublish = async () => {
+    if (isLoading) return;
+
     try {
+      message.loading({
+        key: ACTION_MESSAGE_KEY,
+        content: "Publicando post...",
+        duration: 0,
+      });
+
       await publishMutation.mutateAsync(post.id);
-      message.success("Publicación enviada correctamente");
+
+      message.success({
+        key: ACTION_MESSAGE_KEY,
+        content: "Publicación enviada correctamente.",
+        duration: 3,
+      });
     } catch (error) {
       console.error(error);
-      message.error(getErrorMessage(error, "No se pudo publicar"));
+
+      message.error({
+        key: ACTION_MESSAGE_KEY,
+        content: getApiErrorMessage(error, "No se pudo publicar."),
+        duration: 5,
+      });
     }
   };
 
   const handleCancel = async () => {
+    if (isLoading) return;
+
     try {
+      message.loading({
+        key: ACTION_MESSAGE_KEY,
+        content: "Cancelando publicación...",
+        duration: 0,
+      });
+
       await cancelMutation.mutateAsync(post.id);
-      message.success("Publicación cancelada correctamente");
+
+      message.success({
+        key: ACTION_MESSAGE_KEY,
+        content: "Publicación cancelada correctamente.",
+        duration: 3,
+      });
     } catch (error) {
       console.error(error);
-      message.error(getErrorMessage(error, "No se pudo cancelar"));
+
+      message.error({
+        key: ACTION_MESSAGE_KEY,
+        content: getApiErrorMessage(error, "No se pudo cancelar."),
+        duration: 5,
+      });
     }
   };
 
   const handleRestore = async () => {
+    if (isLoading) return;
+
     try {
+      message.loading({
+        key: ACTION_MESSAGE_KEY,
+        content: "Restaurando publicación...",
+        duration: 0,
+      });
+
       await restoreMutation.mutateAsync(post.id);
-      message.success("Publicación restaurada correctamente");
+
+      message.success({
+        key: ACTION_MESSAGE_KEY,
+        content: "Publicación restaurada correctamente.",
+        duration: 3,
+      });
     } catch (error) {
       console.error(error);
-      message.error(getErrorMessage(error, "No se pudo restaurar"));
+
+      message.error({
+        key: ACTION_MESSAGE_KEY,
+        content: getApiErrorMessage(error, "No se pudo restaurar."),
+        duration: 5,
+      });
     }
   };
 
   return (
     <Space wrap>
       {(post.status === "DRAFT" || post.status === "SCHEDULED") && (
-        <Button onClick={() => onEdit(post)} disabled={isLoading}>
+        <Button
+          onClick={() => onEdit(post)}
+          disabled={isLoading}
+        >
           Editar
         </Button>
       )}
@@ -84,8 +126,15 @@ export function PostActions({ post, onEdit }: Props) {
           onConfirm={handlePublish}
           okText="Sí"
           cancelText="No"
+          okButtonProps={{
+            loading: publishMutation.isPending,
+          }}
         >
-          <Button type="primary" loading={publishMutation.isPending} disabled={isLoading}>
+          <Button
+            type="primary"
+            loading={publishMutation.isPending}
+            disabled={isLoading}
+          >
             Publicar
           </Button>
         </Popconfirm>
@@ -98,8 +147,15 @@ export function PostActions({ post, onEdit }: Props) {
           onConfirm={handleCancel}
           okText="Sí"
           cancelText="No"
+          okButtonProps={{
+            loading: cancelMutation.isPending,
+          }}
         >
-          <Button danger loading={cancelMutation.isPending} disabled={isLoading}>
+          <Button
+            danger
+            loading={cancelMutation.isPending}
+            disabled={isLoading}
+          >
             Cancelar
           </Button>
         </Popconfirm>
@@ -112,8 +168,14 @@ export function PostActions({ post, onEdit }: Props) {
           onConfirm={handleRestore}
           okText="Sí"
           cancelText="No"
+          okButtonProps={{
+            loading: restoreMutation.isPending,
+          }}
         >
-          <Button loading={restoreMutation.isPending} disabled={isLoading}>
+          <Button
+            loading={restoreMutation.isPending}
+            disabled={isLoading}
+          >
             Restaurar
           </Button>
         </Popconfirm>
@@ -122,7 +184,9 @@ export function PostActions({ post, onEdit }: Props) {
       {(post.status === "PUBLISHED" ||
         post.status === "FAILED" ||
         post.status === "PROCESSING") && (
-        <Tag color="default">Sin acciones</Tag>
+        <Tag color="default">
+          Sin acciones
+        </Tag>
       )}
     </Space>
   );

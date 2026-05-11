@@ -14,7 +14,8 @@ import {
   message,
 } from "antd";
 import dayjs, { Dayjs } from "dayjs";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+
 import { useGeneratePost } from "../hooks/use-generate-post";
 import { usePlanAccess } from "../../billing/hooks/use-plan-access";
 import type {
@@ -27,6 +28,7 @@ import type {
   RegeneratePostRequest,
 } from "../../../types/ai.types";
 import type { PostPageOption } from "./post-form-drawer";
+import { getApiErrorMessage } from "../../../shared/utils/error.utils";
 
 const { Text } = Typography;
 const { useBreakpoint } = Grid;
@@ -86,24 +88,7 @@ const PLATFORM_OPTIONS: Array<{ label: string; value: AiPlatform }> = [
 
 const PREMIUM_TEMPLATES: AiTemplateValue[] = ["PREMIUM_AUTO"];
 const PREMIUM_IMAGE_MODES: ImageGenerationMode[] = ["FINAL_AD_CREATIVE"];
-
-function getErrorMessage(error: unknown) {
-  if (
-    error &&
-    typeof error === "object" &&
-    "response" in error &&
-    error.response &&
-    typeof error.response === "object" &&
-    "data" in error.response
-  ) {
-    const data = error.response.data as { message?: string; error?: string };
-    return data?.message || data?.error || "No se pudo generar el post con IA";
-  }
-
-  if (error instanceof Error) return error.message;
-
-  return "No se pudo generar el post con IA";
-}
+const GENERATE_MESSAGE_KEY = "ai-generate-post";
 
 export function AiGenerateDrawer({
   open,
@@ -132,23 +117,65 @@ export function AiGenerateDrawer({
 
   const selectedPageIds = Form.useWatch("targetPageIds", form) ?? [];
   const selectedTemplate =
-    Form.useWatch(["creativeOptions", "template"], form) ?? "PREMIUM_AUTO";
+    Form.useWatch(["creativeOptions", "template"], form) ??
+    (canUsePremiumAi ? "PREMIUM_AUTO" : "SOCIAL_BRAND");
+
   const selectedImageMode =
     Form.useWatch(["creativeOptions", "imageGenerationMode"], form) ??
-    "FINAL_AD_CREATIVE";
+    (canUsePremiumImages ? "FINAL_AD_CREATIVE" : "EDITABLE_BASE");
 
   const isPremiumTemplate = PREMIUM_TEMPLATES.includes(selectedTemplate);
   const isPremiumImageMode = PREMIUM_IMAGE_MODES.includes(selectedImageMode);
+  const isGenerating = generateMutation.isPending;
+
+  useEffect(() => {
+    if (!open) return;
+
+    if (!canUsePremiumAi && selectedTemplate === "PREMIUM_AUTO") {
+      form.setFieldValue(["creativeOptions", "template"], "SOCIAL_BRAND");
+    }
+
+    if (!canUsePremiumImages && selectedImageMode === "FINAL_AD_CREATIVE") {
+      form.setFieldValue(
+        ["creativeOptions", "imageGenerationMode"],
+        "EDITABLE_BASE"
+      );
+    }
+  }, [
+    open,
+    form,
+    canUsePremiumAi,
+    canUsePremiumImages,
+    selectedTemplate,
+    selectedImageMode,
+  ]);
+
+  const handleClose = () => {
+    if (isGenerating) {
+      messageApi.info("Espera a que termine la generación del post.");
+      return;
+    }
+
+    onClose();
+  };
 
   const handleFinish = async (values: FormValues) => {
+    if (isGenerating) return;
+
     const isTryingMultiPage = values.targetPageIds.length > 1;
     const isTryingSchedule = !!values.scheduledAt;
-    const isTryingPremiumTemplate =
-      !!values.creativeOptions.template &&
-      PREMIUM_TEMPLATES.includes(values.creativeOptions.template);
+
+    const template =
+      values.creativeOptions.template ??
+      (canUsePremiumAi ? "PREMIUM_AUTO" : "SOCIAL_BRAND");
+
+    const imageGenerationMode =
+      values.creativeOptions.imageGenerationMode ??
+      (canUsePremiumImages ? "FINAL_AD_CREATIVE" : "EDITABLE_BASE");
+
+    const isTryingPremiumTemplate = PREMIUM_TEMPLATES.includes(template);
     const isTryingPremiumImageMode =
-      !!values.creativeOptions.imageGenerationMode &&
-      PREMIUM_IMAGE_MODES.includes(values.creativeOptions.imageGenerationMode);
+      PREMIUM_IMAGE_MODES.includes(imageGenerationMode);
 
     if (isTryingSchedule && !canSchedule) {
       messageApi.warning("Tu plan actual no permite programar publicaciones.");
@@ -185,9 +212,8 @@ export function AiGenerateDrawer({
         showLogo: values.creativeOptions.showLogo,
         showCTA: values.creativeOptions.showCTA,
         showSocialLinks: values.creativeOptions.showSocialLinks,
-        template: values.creativeOptions.template ?? "PREMIUM_AUTO",
-        imageGenerationMode:
-          values.creativeOptions.imageGenerationMode ?? "FINAL_AD_CREATIVE",
+        template,
+        imageGenerationMode,
       },
     };
 
@@ -198,13 +224,29 @@ export function AiGenerateDrawer({
     };
 
     try {
+      messageApi.loading({
+        key: GENERATE_MESSAGE_KEY,
+        content: "Generando post con IA... Esto puede tardar unos segundos.",
+        duration: 0,
+      });
+
       const result = await generateMutation.mutateAsync(payload);
-      messageApi.success("Post generado correctamente con IA");
+
+      messageApi.success({
+        key: GENERATE_MESSAGE_KEY,
+        content: "Post generado correctamente con IA.",
+        duration: 3,
+      });
+
       onSuccess(result, regeneratePayload);
       form.resetFields();
       onClose();
     } catch (error) {
-      messageApi.error(getErrorMessage(error));
+      messageApi.error({
+        key: GENERATE_MESSAGE_KEY,
+        content: getApiErrorMessage(error, "No se pudo generar el post con IA."),
+        duration: 5,
+      });
     }
   };
 
@@ -215,9 +257,12 @@ export function AiGenerateDrawer({
       <Drawer
         title="Generar post con IA"
         open={open}
-        onClose={onClose}
+        onClose={handleClose}
         width={isMobile ? "100%" : 560}
-        destroyOnClose
+        destroyOnClose={!isGenerating}
+        maskClosable={!isGenerating}
+        keyboard={!isGenerating}
+        closable={!isGenerating}
         styles={{
           body: {
             padding: isMobile ? 16 : 24,
@@ -228,6 +273,7 @@ export function AiGenerateDrawer({
           form={form}
           layout="vertical"
           onFinish={handleFinish}
+          disabled={isGenerating}
           initialValues={{
             tone: "PROFESIONAL",
             platform: "FACEBOOK",
@@ -238,8 +284,10 @@ export function AiGenerateDrawer({
               showLogo: true,
               showCTA: true,
               showSocialLinks: true,
-              template: "PREMIUM_AUTO",
-              imageGenerationMode: "FINAL_AD_CREATIVE",
+              template: canUsePremiumAi ? "PREMIUM_AUTO" : "SOCIAL_BRAND",
+              imageGenerationMode: canUsePremiumImages
+                ? "FINAL_AD_CREATIVE"
+                : "EDITABLE_BASE",
             },
           }}
         >
@@ -315,7 +363,9 @@ export function AiGenerateDrawer({
               {
                 validator: async (_, value: number[] | undefined) => {
                   const selected = value ?? [];
+
                   if (selected.length <= 1) return;
+
                   if (!canUseMultiPage) {
                     throw new Error(
                       "Tu plan actual no permite seleccionar varias páginas."
@@ -358,7 +408,7 @@ export function AiGenerateDrawer({
               showTime
               style={{ width: "100%" }}
               format="YYYY-MM-DD HH:mm:ss"
-              disabled={!canSchedule}
+              disabled={!canSchedule || isGenerating}
               disabledDate={(current) =>
                 current ? current.isBefore(dayjs().startOf("day")) : false
               }
@@ -375,6 +425,7 @@ export function AiGenerateDrawer({
               {
                 validator: async (_, value: AiTemplateValue | undefined) => {
                   if (!value) return;
+
                   if (PREMIUM_TEMPLATES.includes(value) && !canUsePremiumAi) {
                     throw new Error(
                       "Tu plan actual no permite templates premium."
@@ -412,6 +463,7 @@ export function AiGenerateDrawer({
                   value: ImageGenerationMode | undefined
                 ) => {
                   if (!value) return;
+
                   if (
                     PREMIUM_IMAGE_MODES.includes(value) &&
                     !canUsePremiumImages
@@ -499,10 +551,10 @@ export function AiGenerateDrawer({
             type="primary"
             htmlType="submit"
             block
-            loading={generateMutation.isPending}
-            disabled={pages.length === 0}
+            loading={isGenerating}
+            disabled={isGenerating || pages.length === 0}
           >
-            Generar con IA
+            {isGenerating ? "Generando..." : "Generar con IA"}
           </Button>
         </Form>
       </Drawer>

@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import {
+  Alert,
   Button,
   Card,
   Empty,
   Form,
   Input,
+  message,
   Modal,
   Popconfirm,
   Select,
@@ -22,6 +24,7 @@ import type {
   UpdateBrandSocialLinkRequest,
 } from "../../../types/brand.types";
 import { BRAND_CONTACT_PLATFORM_OPTIONS } from "../constants/brand-social-platforms";
+import { useBrandProfile } from "../hooks/use-brand-profile";
 import { useBrandSocialLinks } from "../hooks/use-brand-social-links";
 import { useCreateBrandSocialLink } from "../hooks/use-create-brand-social-link";
 import { useUpdateBrandSocialLink } from "../hooks/use-update-brand-social-link";
@@ -44,7 +47,9 @@ function normalizeNullableString(value?: string | null) {
 }
 
 function formatPlatformLabel(platform: string) {
-  const match = BRAND_CONTACT_PLATFORM_OPTIONS.find((item) => item.value === platform);
+  const match = BRAND_CONTACT_PLATFORM_OPTIONS.find(
+    (item) => item.value === platform
+  );
   return match?.label ?? platform;
 }
 
@@ -59,12 +64,19 @@ function getDisplayValue(item: BrandSocialLinkResponse) {
 export function BrandSocialLinksSection() {
   const [form] = Form.useForm<FormValues>();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<BrandSocialLinkResponse | null>(null);
+  const [editingItem, setEditingItem] =
+    useState<BrandSocialLinkResponse | null>(null);
 
+  const { data: brandProfile } = useBrandProfile();
   const { data = [], isLoading } = useBrandSocialLinks(false);
+
   const createMutation = useCreateBrandSocialLink();
   const updateMutation = useUpdateBrandSocialLink();
   const deleteMutation = useDeleteBrandSocialLink();
+
+  const hasActiveBrandProfile = Boolean(
+    brandProfile?.id && brandProfile?.isActive
+  );
 
   const isSubmitting =
     createMutation.isPending ||
@@ -72,6 +84,11 @@ export function BrandSocialLinksSection() {
     deleteMutation.isPending;
 
   const openCreateModal = () => {
+    if (!hasActiveBrandProfile) {
+      message.warning("Primero debes crear y activar tu perfil de marca.");
+      return;
+    }
+
     setEditingItem(null);
     form.setFieldsValue({
       platform: "INSTAGRAM",
@@ -146,8 +163,11 @@ export function BrandSocialLinksSection() {
         id: editingItem.id,
         data: payload,
       });
+
+      message.success("Red/contacto actualizado correctamente");
     } else {
       await createMutation.mutateAsync(payload);
+      message.success("Red/contacto agregado correctamente");
     }
 
     handleClose();
@@ -249,15 +269,28 @@ export function BrandSocialLinksSection() {
       bordered={false}
       title="Redes y contacto"
       extra={
-        <Button type="primary" onClick={openCreateModal}>
+        <Button
+          type="primary"
+          onClick={openCreateModal}
+          disabled={!hasActiveBrandProfile}
+        >
           Agregar red/contacto
         </Button>
       }
     >
       <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        {!hasActiveBrandProfile && (
+          <Alert
+            type="warning"
+            showIcon
+            message="Primero configura y activa tu perfil de marca."
+            description="Después de guardar tu branding podrás agregar redes sociales, teléfono, web o email."
+          />
+        )}
+
         <Text type="secondary">
-          Configura redes sociales, teléfono, web o email de tu marca para usarlos
-          después en diseños y posts automáticos.
+          Configura redes sociales, teléfono, web o email de tu marca para
+          usarlos después en diseños y posts automáticos.
         </Text>
 
         {data.length === 0 && !isLoading ? (
@@ -266,7 +299,11 @@ export function BrandSocialLinksSection() {
               image={Empty.PRESENTED_IMAGE_SIMPLE}
               description="Aún no has agregado redes o datos de contacto"
             >
-              <Button type="primary" onClick={openCreateModal}>
+              <Button
+                type="primary"
+                onClick={openCreateModal}
+                disabled={!hasActiveBrandProfile}
+              >
                 Agregar el primero
               </Button>
             </Empty>
@@ -327,11 +364,7 @@ export function BrandSocialLinksSection() {
             <Switch />
           </Form.Item>
 
-          <Form.Item
-            name="isActive"
-            label="Activo"
-            valuePropName="checked"
-          >
+          <Form.Item name="isActive" label="Activo" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>

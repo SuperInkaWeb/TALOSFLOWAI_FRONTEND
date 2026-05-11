@@ -6,7 +6,9 @@ import {
   Card,
   Empty,
   Grid,
+  Input,
   Popconfirm,
+  Segmented,
   Select,
   Space,
   Table,
@@ -23,6 +25,7 @@ import {
   ReloadOutlined,
   StopOutlined,
   RollbackOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 
 import { usePosts } from "../features/posts/hooks/use-posts";
@@ -458,6 +461,7 @@ export function PostsPage() {
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(10);
   const [status, setStatus] = useState<PostStatus | undefined>(undefined);
+  const [search, setSearch] = useState("");
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<"create" | "edit">("create");
@@ -571,6 +575,32 @@ export function PostsPage() {
     [data]
   );
 
+  const rawPosts = data?.items ?? [];
+
+  const posts = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    if (!normalizedSearch) return rawPosts;
+
+    return rawPosts.filter((post) => {
+      const content = post.content?.toLowerCase() ?? "";
+      const statusText = getStatusLabel(post.status).toLowerCase();
+
+      const targetText =
+        post.targets
+          ?.map((target) => `${target.pageName} ${target.status}`)
+          .join(" ")
+          .toLowerCase() ?? "";
+
+      return (
+        content.includes(normalizedSearch) ||
+        statusText.includes(normalizedSearch) ||
+        targetText.includes(normalizedSearch) ||
+        String(post.id).includes(normalizedSearch)
+      );
+    });
+  }, [rawPosts, search]);
+
   const columns: ColumnsType<PostItem> = useMemo(
     () => [
       {
@@ -659,8 +689,6 @@ export function PostsPage() {
     [handleOpenDetail, handleOpenEdit, handleSaved]
   );
 
-  const posts = data?.items ?? [];
-
   return (
     <Card
       style={{ width: "100%" }}
@@ -730,21 +758,84 @@ export function PostsPage() {
           </Space>
         </div>
 
-        <div>
-          <Text strong>Filtrar por estado</Text>
-          <br />
-          <Select
-            allowClear
-            placeholder="Todos"
-            style={{ width: isMobile ? "100%" : 220, marginTop: 8 }}
-            value={status}
-            onChange={(value) => {
-              setPage(0);
-              setStatus(value);
-            }}
-            options={STATUS_OPTIONS}
-          />
-        </div>
+        <Card
+          size="small"
+          style={{
+            borderRadius: 16,
+            background: "#fafafa",
+          }}
+        >
+          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+            <Space
+              wrap
+              style={{
+                width: "100%",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="Buscar por contenido, página, estado o ID..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                style={{
+                  width: isMobile ? "100%" : 360,
+                }}
+              />
+
+              <Space wrap style={{ width: isMobile ? "100%" : undefined }}>
+                <Select
+                  allowClear
+                  placeholder="Estado"
+                  style={{ width: isMobile ? "100%" : 220 }}
+                  value={status}
+                  onChange={(value) => {
+                    setPage(0);
+                    setStatus(value);
+                  }}
+                  options={STATUS_OPTIONS}
+                />
+
+                <Button
+                  onClick={() => {
+                    setSearch("");
+                    setStatus(undefined);
+                    setPage(0);
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              </Space>
+            </Space>
+
+            <Segmented
+              block={isMobile}
+              value={status ?? "ALL"}
+              onChange={(value) => {
+                setPage(0);
+                setStatus(value === "ALL" ? undefined : (value as PostStatus));
+              }}
+              options={[
+                { label: "Todos", value: "ALL" },
+                { label: "Borradores", value: "DRAFT" },
+                { label: "Programados", value: "SCHEDULED" },
+                { label: "Publicados", value: "PUBLISHED" },
+                { label: "Fallidos", value: "FAILED" },
+                { label: "Cancelados", value: "CANCELED" },
+              ]}
+              style={{
+                overflowX: "auto",
+              }}
+            />
+
+            <Text type="secondary">
+              Mostrando {posts.length} publicación{posts.length === 1 ? "" : "es"}
+              {search.trim() ? " según la búsqueda actual." : "."}
+            </Text>
+          </Space>
+        </Card>
 
         {generatedPost && regeneratePayload && (
           <AiPreviewCard
@@ -791,7 +882,13 @@ export function PostsPage() {
                 />
               ))
             ) : (
-              <Empty description="No hay publicaciones" />
+              <Empty
+                description={
+                  search || status
+                    ? "No se encontraron publicaciones con los filtros aplicados."
+                    : "Todavía no hay publicaciones creadas."
+                }
+              />
             )}
 
             {posts.length > 0 && (
